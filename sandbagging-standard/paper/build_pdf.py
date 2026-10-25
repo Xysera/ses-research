@@ -171,9 +171,9 @@ def styles():
                          leading=13.2, textColor=INK, spaceAfter=2.6 * mm, alignment=TA_LEFT))
     s.add(ParagraphStyle(name="Captionx", parent=s["BodyText"], fontName="Helvetica-Oblique", fontSize=8,
                          leading=10.5, textColor=MUTED, spaceBefore=1.5 * mm, spaceAfter=4 * mm))
-    s.add(ParagraphStyle(name="Refx", parent=s["BodyText"], fontName="Helvetica", fontSize=7.0,
-                         leading=8.4, textColor=INK, leftIndent=4 * mm, firstLineIndent=-4 * mm,
-                         spaceAfter=0.45 * mm))
+    s.add(ParagraphStyle(name="Refx", parent=s["BodyText"], fontName="Helvetica", fontSize=6.8,
+                         leading=8.0, textColor=INK, leftIndent=4 * mm, firstLineIndent=-4 * mm,
+                         spaceAfter=0.35 * mm))
     s.add(ParagraphStyle(name="TableCell", parent=s["BodyText"], fontName="Helvetica", fontSize=7.3,
                          leading=9.2, textColor=INK))
     s.add(ParagraphStyle(name="TableHead", parent=s["BodyText"], fontName="Helvetica-Bold", fontSize=7.2,

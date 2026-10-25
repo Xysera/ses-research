@@ -1,6 +1,6 @@
 # Toward an Evidence Standard for Sandbagging Claims: A Literature Synthesis, Reference Implementation and Worked Application
 
-**Torin Ethreidge.** Lead Researcher and Senior Researcher, Xysera Research. Preprint release candidate v1.0-rc1 of 25 October 2026; decision rules SES v0.5. Not peer reviewed. Public repository: `https://github.com/Xysera/ses-research`. All numbers come from cited sources, released third-party logs, or the project's own logs; reading depth is recorded in `sources/LEDGER.md`.
+**Torin Ethreidge.** Lead Researcher and Senior Researcher, Xysera Research. Preprint release candidate v1.0-rc1 of 25 October 2026; decision rules SES v0.5. Not peer reviewed. Public repository: `https://github.com/Xysera/ses-research`. Original code: Apache-2.0. Manuscript and original project materials: CC BY 4.0. Third-party materials retain their original terms. All numbers come from cited sources, released third-party logs, or the project's own logs; reading depth is recorded in `sources/LEDGER.md`.
 
 ## Abstract
 
@@ -117,6 +117,8 @@ We propose a graded, operational evidence standard for sandbagging claims, a tes
 **Author contributions.** Torin Ethreidge: conceptualization, methodology, investigation, software, formal analysis, data curation, visualization, writing—original draft, writing—review and editing, project administration, and research leadership.
 
 **Safety and cost.** Experiments used harmless, objectively scored tasks and existing open-weight models. No model training or fine-tuning was performed. The project used local inference and a small exploratory cloud screen; no paid API inference was used.
+
+**Licensing.** Original project software is released under Apache-2.0. The manuscript, original documentation, figures and original research data are released under CC BY 4.0. Third-party benchmark content, released external logs, model artifacts, papers and sourced materials retain their original terms and are not relicensed; boundaries are documented in `THIRD_PARTY_NOTICES.md`.
 
 ## Appendix A. Complete operational criteria table
 

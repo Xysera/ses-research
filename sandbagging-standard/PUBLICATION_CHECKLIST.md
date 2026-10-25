@@ -34,11 +34,10 @@ Status date: 25 October 2026. “Complete” means completed within the reposito
 - [x] **22. Improve abstract.** Framework, negative Study 1 result, held-out application and validation limits are separated.
 - [x] **23. State contributions.** Ledger, standard, implementation and empirical demonstrations are distinguished.
 - [x] **24. Finalize citation audit.** In-text/bibliography consistency and stable arXiv/PMLR identifiers are checked. Project links await item 7.
-- [ ] **25. Complete release metadata. PARTIAL.** Author/byline, contributions and public repository are recorded. License selection and any assigned DOI/preprint identifier remain pending.
+- [x] **25. Complete release metadata.** Author/byline, contributions, public repository and split licenses are recorded. A DOI may be added if assigned but is not required for this repository preprint.
 - [x] **26. PDF quality check.** Fonts, figures, pagination, tables, notation and source/PDF consistency checked for v1.0-rc1.
 
 ## Publisher handoff
 
-1. Select licenses (suggested: CC BY 4.0 for paper/docs/data and Apache-2.0 or MIT for code).
-2. Add any assigned DOI/preprint identifier.
-3. Upload the PDF, source archive, data archive, manifest and checksums as one versioned release.
+1. Add any assigned DOI/preprint identifier if the preprint is deposited with an archive.
+2. Upload the PDF, source archive, data archive, manifest and checksums as one versioned release.

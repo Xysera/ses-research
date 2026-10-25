@@ -26,4 +26,4 @@ Model weights and local runtime environments are intentionally excluded. Model i
 
 ## License
 
-No license has yet been selected. Unless and until a license is added, standard copyright restrictions apply.
+Original code is licensed under Apache-2.0. The manuscript, original documentation, original figures, and original research data are licensed under CC BY 4.0. Third-party benchmark content, released external logs, model artifacts, papers, and sourced material retain their original terms. See `LICENSE`, `LICENSE-DOCUMENTATION.md`, and `THIRD_PARTY_NOTICES.md`.

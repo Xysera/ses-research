@@ -20,6 +20,12 @@ Torin Ethreidge: conceptualization, methodology, investigation, software, formal
 
 Public URL: `https://github.com/Xysera/ses-research` (verified live on 25 October 2026).
 
+## Licensing
+
+- Original software: Apache License 2.0.
+- Manuscript, original documentation, original figures, and original research data: CC BY 4.0.
+- Third-party benchmark content, external logs, model artifacts, papers, and sourced materials: original upstream terms; not relicensed.
+
 ## Abstract
 
 “Sandbagging,” strategic underperformance on an evaluation, matters because capability evaluations inform deployment and governance decisions. We synthesise 43 screened records into a proposed Sandbagging Evidence Standard with five cumulative claim levels and explicit operational criteria. A reference implementation computes matched-cell criteria from trial-level logs and returns an indeterminate outcome when neither equivalence nor underperformance is established. We exercise it with 14 synthetic tests, a worked application to 166,250 preregistered trials, held-out but incomplete released organism cases, and a nonconfirmatory screen. In Study 1, matched neutral notes reproduce almost all penalty-note degradation: three models receive L1-ctx and two are indeterminate; none supports consequence-sensitive underperformance. Cedar supports a descriptive held-out capability gap; Oak is statistically indeterminate. The standard is an auditable proposal, not a validated detector, and never establishes intent.
