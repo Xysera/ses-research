@@ -1,0 +1,4 @@
+e3d63b37ebf078b77dd9ba87799d60a0b596760cd7d7dbb58431323c255f7c26  releases/xysera-ses-v1.0-rc1-paper.pdf
+b3c65b053bc27de4aed151749d5bcd044292456c671b005831a2fe0b3a2690be  releases/xysera-ses-v1.0-rc1-source.tar.gz
+9455e18ecfed7d09780d5fe15a23a55c2038ee03a928e23dc1449644ff57e970  releases/xysera-ses-v1.0-rc1-data.tar.gz
+2d4df9cfde9db775de6dd6aea857943b5e555631a492ebf5fbc8c3c01c8b3bbc  releases/DATA_MANIFEST_v1.0-rc1.txt

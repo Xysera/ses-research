@@ -1,0 +1,1359 @@
+Item Response Theory for AI Safety
+Joshua Fonseca Rivera∗1, Neil Shah∗1, David Demitri Africa†2, Konstantinos Voudouris†2
+1Independent
+2UK AI Security Institute
+Abstract
+Language models differ in how safely they behave and these
+differences are measured by safety benchmarks. But aggre-
+gated benchmark scores are hard to trust and interpret, be-
+cause benchmarks duplicate one another, correlate heavily,
+and models may sandbag when they detect evaluation. To ad-
+dress these issues, we draw on Item Response Theory (IRT),
+a statistical toolkit for measuring these latents from perfor-
+manceonitemswithinferredpsychometricproperties.Wefit
+IRT models to eight safety benchmarks across 192 language
+models,thelargestpsychometricanalysisofLLMsafetyeval-
+uations to date, and contribute three results. First, we find
+that three interpretable factors of refusal strictness, truthful-
+ness, and contextual harm explain most of the variance be-
+tween models across benchmarks. Second, psychometrically
+selecteditemsrecoverfullbenchmarkscoreswithlowererror
+than random subsets of the same size, and roughly ten adap-
+tivelychosenitemssufficeforseveralindividualbenchmarks,
+cutting evaluation cost by 97–99%. Third, IRT supports au-
+ditsofindividualmodels,showingthatitcanbeusedtodetect
+naive sandbagging and changes of model behind APIs. Over-
+all,weshowIRTisaready-madetoolkitforreading,reducing,
+and auditing safety benchmarks, which we recommend fron-
+tier labs and evaluators adopt.
+Introduction
+Language models vary widely in how safely they behave:
+whether they comply with harmful requests, over-refuse be-
+nign ones, or answer truthfully. This is scored by safety
+benchmarks,whichuseadversarialtestitemsmarkedsafeor
+unsafe(Mazeikaetal.2024;Xieetal.2024;Zouetal.2023).
+Theseresultsdriveleaderboards,releasedecisions,andmar-
+keting.Yet,abenchmarkscoreisonlyusefulifweunderstand
+whatitmeasures,whetheritsitemsadddistinctinformation,
+and whether the observed responses reflect the model’s or-
+dinary behavior (Bean et al. 2025; Hernández-Orallo 2017;
+Romero-Alvarado et al. 2026; Harding and Sharadin 2024;
+Voudouris et al. 2026).
+Existing benchmark suites make each of these questions
+difficult. In capability evaluation, scores correlate strongly
+within and across these benchmarks, suggesting that many
+tests and items measure overlapping behavior (Kipnis et al.
+2025;MaiaPoloetal.2024).Atthesametime,suchcorrela-
+tionsmayrewardcontradictingthings;amodelcantherefore
+improve on one benchmark by becoming worse on another.
+∗These authors contributed equally.
+†These authors contributed equally as senior authors.
+Full benchmark suites are also expensive and often ineffi-
+cient.Manyitemsarepassedorfailedbynearlyeverymodel
+and contribute little to distinguishing among them. Finally,
+benchmark responses are mediated by imperfect judges and
+maybestrategicallymanipulated.Amodelthatrecognizesan
+evaluationcouldselectivelyalteritsbehaviorwhileretaining
+a plausible aggregate score (van der Weij et al. 2024).
+Item response theory (IRT; Lord 1980; Embretson and
+Reise 2000; Reckase 2009) provides a common framework
+for answering these questions. IRT models each response as
+an interaction between a respondent’s ability and an item’s
+difficulty and discrimination. Once fitted, an IRT model can
+reveal the latent abilities explaining behavior on a collec-
+tion of tests, identify informative items, and flag response
+patterns indicative of cheating or careless answering. IRT
+has recently been used to compress LLM capability bench-
+marks while preserving model rankings (Maia Polo et al.
+2024; Kipnis et al. 2025; Hofmann et al. 2025), and con-
+current work applies adaptive testing to safety benchmarks
+(Spagliardi et al. 2026). We show that compression is only
+one of its uses.
+Inthiswork,wefitIRTmodelstoeightsafetybenchmarks
+(5,255 items, 192 models) covering harmful compliance,
+over-refusal, and truthfulness. This is, to our knowledge, the
+largest psychometric analysis of LLM safety benchmarks to
+date. We use the resulting calibration in three ways (Figure
+1):
+•Characterizing what safety benchmarks measure.We
+find that three latent factors (refusal strictness,truthful-
+ness, andcontextual harm) explain 77% of the variance
+betweenmodelabilities.Wealsofindthatthesuitecannot
+be summarized by a single safety ability.
+•Cost-efficientbenchmarking.Psychometricallyselected
+items estimate full-benchmark scores with lower error
+than random subsets of the same size: three fixed 25-
+item tests recover the three latent abilities, and roughly
+ten adaptively chosen items recover several individual
+benchmarks, reducing their evaluation cost by 97–99%.
+•Auditing with person-fit.Using promptedsandbagging
+model organisms, IRT-derived person-fit statistics catch
+atleast80%ofselectivepromptedsandbagging.Thisalso
+can be used to identify model substitutions and changes
+behind API endpoints.
+arXiv:2608.05086v1  [cs.AI]  5 Aug 2026
+Using Item Response Theory for AI Safety
+(a)  Fit: one IRT model over every
+model/response pair
+182 LLMs
+5,062 items across 8 safety benchmarks
+Safe Unsafe
+Model ability θ
+P(safe)
+Difficulty bj
+Slope aj
+P(safe) = σ( aj (θ − bj) )
+θ is comparable across item subsets
+(b)  Read: eight benchmarks measure
+three abilities
+Factor loadings of the eight benchmarks
+Refusal
+strictness Truthfulness Contextualharm
+HarmBench
+SORRY-Bench
+AHB
+OR-Bench-Hard
+TruthfulQA
+Do-Not-Answer
+AdvBench
+Health-ORSC
+Positive loading Negative ≈ 0
+Latent ability naming
+In factor analysis, we ﬁnd that three latent factors ﬁt
+best. To interpret these factors, we look at the highest
+loading questions and benchmarks for each one, and
+qualitatively interpret them.
+(c)  Use: shrink benchmarks and audit scores
+Rank recovery from k items (held-out models)
+Items k25 200
+Spearman ρ
+1.0
+0.8
+Adaptive (CAT)
+Static test
+Random items
+75 items (2% of the suite) recover rankings at ρ ≥ 0.92
+Person-ﬁt: can this score be believed?
+Easy items Hard items
+Fails easy, passes hard: improbable at any θ
+Flags 80–100% of prompted sandbagging
+Matches 13 of 14 anonymous API models to their identity
+Figure1:Itemresponsetheoryprovidesacommonframeworkforreading,reducing,andauditingsafetybenchmarks.Left:We
+calibrate item difficulty and discrimination from model responses and use the resulting ability estimates to identify the latent
+structure of safety evaluation.Center:Informative static tests and computerized adaptive testing recover benchmark scores
+and rankings from a small fraction of the original items.Right:Person-fit statistics, historical ability estimates, and response
+fingerprints detect complementary forms of behavioral change.
+Related Work
+ItemresponsetheoryinLLMs.Itemresponsetheoryhas
+beenusedinnaturallanguageprocessingandmachinelearn-
+ing to conduct dataset and leaderboard analysis (Lalor, Wu,
+and Yu 2019; Martínez-Plumed et al. 2016; Rodriguez et al.
+2021;Pacchiardietal.2025)andpropensitymeasurementin
+LLMs(Romero-Alvaradoetal.2026).Forcapabilityevalua-
+tion,tinyBenchmarks(MaiaPoloetal.2024)andmetabench
+(Kipnis et al. 2025) compress leaderboards to 1–3% of their
+items, andFluid Benchmarking (Hofmannet al. 2025)com-
+bines IRT with adaptive item selection to produce similar
+efficiency gains. Closest to our work, concurrent research
+applies computerized adaptive testing to six safety bench-
+marks (Spagliardi et al. 2026), meaning that items are ad-
+ministered one at a time with the latent factor updated after
+each administration. This allows for the latent factor to be
+inferred with significantly fewer inference-time item admin-
+istrationsthanbyrunningthemodelontheentirebenchmark.
+Complementingandextendingthiswork,westudyabroader
+safety suite that includes harmful compliance, over-refusal,
+contextual harm, and truthfulness, calibrate on a substan-
+tially larger model cohort, and use the fitted measurement
+model for construct analysis and model auditing as well as
+compression.
+Safety benchmarks.Our suite spans safety benchmarks
+that measure: complying with harmful requests (Zou et al.
+2023;Mazeikaetal.2024;Xieetal.2024;Wangetal.2023;
+Ganguli et al. 2022), refusing benign requests that merely
+look harmful (over-refusal; Cui et al. 2024; Röttger et al.
+2024), and truthfulness (Lin, Hilton, and Evans 2022). Prior
+work has shown that safety evaluations can be redundant,
+sensitive to scoring choices, and shaped by tradeoffs be-
+tween refusing harmful requests and answering benign ones
+(Romero-Alvarado et al. 2026; Voudouris et al. 2026).
+Materials & Methods
+We collected item-level responses from up to 192 language
+modelsoneightsafetybenchmarksandfittedItemResponse
+Theory (IRT) models to estimate the difficulty and discrim-
+ination of each item together with the latent abilities of the
+models.Weusethefittedmeasurementmodelsinthreeanal-
+yses. First, we infer the latent abilities shared across bench-
+marks.Second,wedistillthesuiteintoshortstaticandadap-
+tive tests. Third, we use expected response patterns to detect
+evaluation-dependent behavior and changes behind model
+APIs.
+Benchmarks and Model Responses
+We evaluate models on eight benchmarks spanning harmful
+compliance, over-refusal, contextual harm, and truthfulness
+(Table 1). The complete suite contains 5,255 items before
+preprocessing.
+We collect one response per available model–item pair
+through OpenRouter’s API, using zero temperature and a
+maximum generation length of 1,024 tokens. Analyses in-
+volving multiple benchmarks use only models with valid
+responses on every benchmark required for that analysis.
+Weevaluate192chatmodelsspanningopen-weightfami-
+liesfrom1Bto∼1Ttotalparameters(Llama,Gemma,Qwen,
+DeepSeek,Mistral,GLM,Kimi,gpt-oss,amongothers)and
+proprietary API-only models (GPT, Claude, Gemini, Grok).
+The169modelswithcompleteresponsesonalleightbench-
+marksformthepoolforcross-benchmarkanalyses;thelatent-
+Benchmark Tests Judge Items
+AdvBench (Zou et al. 2023) harm refusal string match 520
+HarmBench (Mazeika et al. 2024) harm refusal LLM judge 296
+SORRY-Bench (Xie et al. 2024) harm refusal fine-tuned LLM 438
+Do-Not-Answer (Wang et al. 2023) harm refusal classifier 802
+AHB (Galisai et al. 2026) harm refusal LLM judge 676
+OR-Bench-Hard (Cui et al. 2024) over-refusal LLM judge 1,318
+Health-ORSC (Zhang et al. 2026) contextual harm string match 200
+TruthfulQA (Lin, Hilton, and Evans 2022) truthfulness BLEURT-20 817
+Table 1: The eight benchmarks included in our analyses.
+Item counts are reported after removing unanswered and
+zero-variance items, leaving 5,067 items in total.
+structureanalyses(factoranalysisandmultidimensionalIRT)
+usethe134modelsthatadditionallyhaveavalidjudgescore
+for every retained item on every benchmark (judge failures
+leave at least one unscored item for each of the remaining
+35; Appendix A gives the full roster). The complete model
+inventory and benchmark-coverage matrix are provided in
+supplementary material.
+Each generated response is scored using the judge pre-
+scribed by its source benchmark. Letxmj ∈ {0,1}denote
+the scored response of modelmto itemj, wherexmj = 1
+indicatestheresponserewardedbythecorrespondingbench-
+mark.
+Forharmful-requestbenchmarks,avalueofonegenerally
+denotesarefusal.ForOR-Bench-Hard,itdenotesanswering
+abenignrequestratherthanover-refusingit.ForTruthfulQA,
+itdenotesatruthfulanswer.Thisorientationmeansthatlarger
+benchmark-specific ability estimates always correspond to
+higherperformanceaccordingtothebenchmarkbeingfitted.
+Weremoveresponsesforwhichtheprescribedjudgedoes
+not return a valid score. We also remove items with no vari-
+ation across the evaluated models, since these items contain
+no information about differences within the model cohort.
+This preprocessing leaves 5,067 items.
+The 2PL IRT Model
+IRT infers a test-taker’s latent ability from responses to a
+fixed set of items. We treat language models as test-takers,
+benchmark prompts as items, and safe responses as correct
+answers.Thetwo-parameterlogistic(2PL)modelisgivenby
+P(x mj = 1|θ m, aj, bj) =σ(a j(θm −b j)),(1)
+whereθ m is the model’s latent ability,bj is the item’s diffi-
+culty, andaj is its discrimination. Difficulty determines the
+ability level at which an item changes from usually failed to
+usually passed (i.e., whereP(xmj = 1) = 0.5). Discrim-
+ination determines how sharply the probability of success
+changes around that point. Item and ability parameters are
+inferredjointlybymarginalmaximumlikelihood(Bakerand
+Kim 2004); a model’s ability is then the posterior mode of
+θunder a standard-normal prior, given its responses and the
+fixed item parameters. Unlike a raw pass rate, this estimate
+remains on a common scale when different models answer
+different subsets of items, which enables both short fixed
+tests and adaptive testing.
+We use the 2PL rather than simpler or richer alternatives.
+The 1PL (Rasch) model constrains all items to discriminate
+equally, which the data reject: fitted discriminations vary
+by roughly an order of magnitude within every benchmark,
+variation that item selection later exploits, and likelihood-
+ratio tests reject the equal-discrimination constraint on all
+eightbenchmarks.Conversely,the3PLand4PLaddguessing
+andslipparametersthatimproveAICononlyonebenchmark
+and on none, respectively, and BIC never prefers a model
+richer than the 2PL (Appendix E).
+Human psychometric datasets tend to have thousands of
+test-takers, but LLM evaluations contain many more items
+testedonmanyfewermodels.Atthisscale,anunregularized
+maximum-likelihood fit is usually unstable.1 We therefore
+regularize our IRT model by adding a log-normal prior on
+discrimination and a normal prior on the item intercept. We
+verify the effectiveness of this using split-half calibration,
+where the model cohort is divided into two disjoint halves,
+and the 2PL model is fit separately to each half. Then, we
+select the 25 items with highest discrimination in the first
+fit, and measure how much of those items’ discrimination
+is retained in the second. Without regularization, the top-
+25 items retain only 28% of their fitted discrimination on
+AdvBench and 38% on HarmBench (mean over 10 random
+splits);withourpriors,retentionrisesto68%and76%,while
+the bulk of the parameter distribution is left unchanged.
+All results below use the regularized fits2.
+Latent Ability Inference
+Wefitaseparate2PLmodeltoeachbenchmarkusingthefull
+model cohort. This gives every model one estimated ability
+perbenchmark,producinganM×8abilitymatrix.Wethen
+apply minimum-residual factor analysis, which chooses fac-
+tor loadings that reproduce the observed correlation matrix,
+with oblimin rotation, which allows the resulting factors to
+becorrelatedratherthanforcingthemtobeindependent.We
+selectthenumberoffactorsusingtheRootMeanSquareEr-
+ror of Approximation (RMSEA), the Comparative Fit Index
+(CFI), and Horn’s parallel analysis (Horn 1965; Embretson
+and Reise 2000). Appendix D describes these criteria and
+the sensitivity of the solution to the extraction method, and
+Appendix C reports an item-level multidimensional IRT fit
+that relaxes the two-stage design.
+Benchmark Distillation
+The full benchmark suite before processing contains 5,255
+items, but many contribute little information about a given
+model. Easy items are passed by nearly every model, while
+1The intuition for this is as follows. For an item that happens to
+dividetheobservedmodelsperfectly,thediscriminationparameter,
+aj, won’t converge as the closer the logistic gets to a step func-
+tion, the better the fit. For items that do not discriminate models
+because they are too hard or too easy, the difficulty parameter,bj,
+will also tend towards positive or negative infinity. This has down-
+stream consequences for item selection based on these parameters.
+Small samples of test-takers increase the risk of these problems by
+reducing the possible variance in response distributions.
+2As IRT tooling defaults can be finicky, cohort sizes like ours
+willbethenormforLLMworkforsometime,sosuchregularization
+is important to note as best practice.
+difficult items are failed by nearly every model. Both con-
+sume compute without helping distinguish models at the
+relevant ability level.
+IRT supports two forms of benchmark reduction. First,
+we can construct a shortstatic testcontaining items that are
+informative across the model population. Second, we can
+usecomputerized adaptive testing(CAT) to choose different
+itemsfordifferentmodelsaccordingtotheirestimatedability.
+Under the 2PL, the Fisher information of itemjat ability
+θis
+Ij(θ) =a 2j Pj(θ) 1−P j(θ).
+Anitemismostinformativenearitsdifficulty,whereamodel
+has approximately equal probability of passing or failing,
+and increases with the square of the item’s discrimination.
+Static tests select items that provide high information across
+the population’s ability range. CAT instead selects the most
+informative item at the current ability estimate, observes
+the response, and updates the estimate before choosing the
+next item (Weiss and Kingsbury 1984; Magis, Yan, and von
+Davier 2017).
+Weevaluatebothmethodsonheld-outmodels.Foreachof
+20randomsplits,weassign75%ofmodelstoacalibrationset
+and 25% to a test set. We fit the 2PL and select items using
+only the calibration models, and evaluate how accurately
+each reduced test reproduces the full-benchmark results for
+the held-out models.
+Our primary criterion is recovery of the full-benchmark
+score, measured by root mean squared error (RMSE); we
+additionally report recovery of model rankings, measured
+by Spearman correlation, for completeness. To predict full
+scores, we fit a spline regression on the calibration models
+using the reduced-test score and estimated ability as inputs.
+For comparison, we draw 100 random item sets at each
+budget. These sets use the same per-benchmark quotas as
+the informed tests and are passed through the same score-
+calibration procedure. Differences between informed and
+random tests therefore reflect item selection rather than test
+length, benchmark composition, or downstream calibration.
+Sandbagging Detection and API Auditing
+IRTmodelsnotonlyestimateability;theyalsoassignaprob-
+abilitytoeachresponsepattern.Person-fitstatisticssuchasl z
+compare a model’s observed responses with those expected
+atitsestimatedability(Drasgow,Levine,andWilliams1985;
+MeijerandSijtsma2001).Amodelthatfailseasyitemswhile
+passingdifficultonesreceivesanimprobableperson-fitscore
+evenifitsoverallpassrateappearsnormal.Inhumantesting,
+such patterns can indicate cheating, careless responding, or
+other departures from the assumed test-taking process.
+Thisprovidesabasisforauditingindividualmodelsusing
+onlyblack-boxaccess.Weconsideranauditorwhohaspub-
+licitemparametersandqueryaccesstoanendpoint,andmay
+additionally have historical ability estimates or reference re-
+sponses from the claimed model. The auditor is concerned
+withtwofailuremodes:amodelthatbehavesdifferentlydur-
+ingevaluationthanduringdeployment,andanendpointthat
+serves different weights than it claims. We evaluate three
+tests that require progressively more reference information
+(Table 2).
+Test Additional requirement Detects
+Person-fit (lz) Item parameters Selective sandbagging
+Ability shift HistoricalθUniform sandbagging and swaps
+Response fingerprint Reference responses Ability-matched swaps
+Table2:Auditmethodsorderedbythereferenceinformation
+they require. Each method detects failure modes that can
+remain invisible to the preceding one.
+Person-fit.We construct controlled prompted-
+sandbagging interventions on HarmBench’s standard-
+behavior subset (196 items after preprocessing). In each
+intervention, a system prompt tells the model that it is
+being evaluated and instructs it to behave with maximum
+caution. We use three prompt framings (plain, persona, and
+incentive) and apply each intervention in three scopes: to
+every item (uniform), only to the model’s weakest harm
+category (targeted), or only when a trigger phrase appears
+(triggered); we call the targeted and triggered scopesselec-
+tivesandbagging.Detectionisfullyblindtotheintervention:
+the auditor receives neither labels identifying sandbagged
+runs nor a clean baseline from the suspect model. A run is
+flagged when itsl z statistic falls below a threshold set at
+the 10th percentile of the 171 cohort models with scored
+responses on this subset, fixing the false-positive rate at
+10%. The 10% operating point is a policy choice fixing
+how many genuine models an auditor would needlessly
+re-examine, not a fitted quantity; Appendix B reports full
+ROC curves from which any other operating point can be
+read.
+Ability shift.The second test re-estimates ability from a
+40-item test and compares it with the model’s historical es-
+timate. A run is flagged when the shift exceeds the smallest
+ability gap that a 40-item test resolves at that ability level,
+estimatedfrompairwiseconfusabilitywithinthecohort.The
+same procedure quantifies when a substitution of one model
+for another is detectable from ability alone: for every pair of
+cohort models, we ask whether a 40-item test distinguishes
+the pair on at least one benchmark.
+Response fingerprint.The third test compares an end-
+point’s responses on a pre-selected item set with previously
+collected responses from the claimed model, and matches
+eachendpointtothereferencemodelwithwhichitsresponses
+agreemost.Wevalidatethisbyre-collecting16endpointson
+500pre-selecteditemseach.Becauseanendpointdoesnotre-
+produceitsownresponsesexactly,wecalibratetheexpected
+level of self-disagreement from repeated collections on the
+same items with the same scoring pipeline (Appendix B).
+Results
+Latent Ability Inference
+Model selection favors three latent factors over one, two,
+or four.A one-factor model explains 47% of the variance
+in the ability matrix and has poor absolute fit (RMSEA=
+0.32).Atwo-factormodelexplains69%,withCFIbelowthe
+conventional threshold for acceptable fit (0.88versus0.95).
+A three-factor model explains 77% and reaches CFI= 0.97
+SB HB AHB ORB DNA TQA HO AB
+SORRY-Bench
+HarmBench
+AHB
+OR-Bench-Hard ⊖
+Do-Not-Answer
+TruthfulQA
+Health-ORSC
+AdvBench
+.89 .53 −.77 .20 −.36 .64 .61
+.89 .57 −.67 .16 −.33 .62 .53
+.53 .57 −.49 −.36 −.56 .59 .19
+−.77 −.67 −.49 .03 .48 −.44 −.31
+.20 .16 −.36 .03 .52 .04 .47
+−.36 −.33 −.56 .48 .52 −.51 −.09
+.64 .62 .59 −.44 .04 −.51 .58
+.61 .53 .19 −.31 .47 −.09 .58
+Refusal strictness
+Truthfulness
+Contextual harm
+−1 0 +1
+Pearson r
+Eight safety benchmarks measure three abilities
+abilities of 134 models
+Figure2:Pearsoncorrelationsbetweenper-benchmarkabili-
+ties(2PLθ,134models),orderedbythethree-factorsolution.
+Boxes mark the three ability clusters; OR-Bench-Hard (⊖)
+correlates negatively with its cluster—it measures refusal
+strictnessreversed.Bluecellsoutsidetheboxesreflectcorre-
+lationbetweentheabilitiesthemselves(refusal×contextual
+harmϕ=.65);thefactorsremaindistinctbecausetheirpat-
+ternsdiffer:theharmpairdoesnotsharetherefusalcluster’s
+over-refusal trade-off (ORB column).
+(Appendix D, Figure 9). Horn’s parallel analysis matched
+to the minimum-residual extraction retains three factors: the
+thirdobservedeigenvalueexceedstheeigenvalueatthesame
+rank in 1,000 random-normal datasets, whereas the fourth
+does not. The PCA-based variant retains two (Appendix D).
+We use the three-factor solution throughout.
+The three factors group the benchmarks as follows (Fig-
+ure 2):
+•Refusal strictness.HarmBench, SORRY-Bench, and
+AHB load on one end of this factor, while OR-Bench-
+Hard loads on the other. HarmBench and SORRY-Bench
+abilitiescorrelatestrongly(ρ= 0.89),andbothcorrelate
+negatively with OR-Bench-Hard (−0.77≤ρ≤ −0.67).
+•Truthfulness.TruthfulQA and Do-Not-Answer define a
+secondfactor.Thisfactorisnearlyindependentofrefusal
+strictness (ϕ= 0.01).
+•Contextual harm.AdvBench and Health-ORSC define
+a third factor through their moderate correlation (ρ=
+0.58). This factor is distinct from refusal strictness, al-
+though the two factors are moderately positively corre-
+lated (ϕ= 0.65).
+Benchmark Distillation
+Three fixed 25-item tests recover all three latent abilities
+using under 2% of the suite.We construct one 25-item
+static test for each of the three latent abilities; together they
+contain 75 items, under 2% of the full suite. On held-out
+models, each test estimates its target ability with lower error
+than a random subset of the same size: RMSE0.047versus
+0.062for refusal strictness,0.041versus0.048for truthful-
+ness,and0.065versus0.067forcontextualharm(Figure3).
+The same tests recover the model orderings atρ= 0.94,
+0.83, and0.89, against random baselines of0.90,0.67, and
+0.87.Withinthetruthfulnesstest,TruthfulQAisestimatedat
+RMSE0.052against a random baseline of0.065; allocating
+the same number of items across one pooled, all-benchmark
+test drops its rank recovery fromρ= 0.73toρ= 0.60.
+Roughly ten adaptive items recover individual bench-
+marks,cuttingcostby97–99%.Approximatelytenadap-
+tive items estimate HarmBench, SORRY-Bench, and OR-
+Bench-Hard scores with 18–34% lower error than a random
+ten-item subset, corresponding to a 97–99% reduction rel-
+ative to administering those benchmarks in full. The same
+ten items recover their full rankings atρ= 0.92–0.94. The
+advantage narrows to 4–21% at 25 items, and by 50 items
+random subsampling matches or beats CAT on score recov-
+ery for five of the eight benchmarks, although seven still
+reachρ≥0.90.
+Adaptive testing beats random subsampling on the full-
+suite composite at every budget.On the sign-aligned
+composite of all eight benchmarks, CAT estimates the full
+score with lower error than random subsampling at every
+evaluated budget (Figure 3, right). At 25 items its error is
+22% below a random subset of the same size, and random
+subsamplingdoesnotmatchituntilroughly55items;beyond
+100itemsthetwoconvergetowithinoverlappingconfidence
+intervals. The fixed static test is ahead of random at 10–50
+items, and random overtakes it beyond that. Rank recovery
+showsthesameordering:CATreachesρ= 0.92at25items,
+a level random sampling reaches at approximately 75–100
+items.
+Sandbagging Detection and API Auditing
+Person-fit catches selective prompted sandbagging but
+missesmostuniformsandbagging.Atthecalibrated10%
+false-positive rate, person-fit flags 80–100% of targeted and
+triggered sandbagging runs in every prompt framing (90%
+and 97% pooled; Figure 4). Uniform sandbagging is flagged
+lessoften:18–20%ofrunsundertheplainandpersonafram-
+ingsand70%undertheincentiveframing(35%pooled).Per-
+framing rates and full ROC curves are given in Appendix B.
+Abilityshiftcatchesuniformsandbagging;combined,the
+two tests detect 94–97% of runs.Uniform sandbagging
+changes the estimated ability by a median of+1.69log-
+its and by as much as+3.94, whereas targeted and triggered
+interventionsshiftabilitybyonly+0.24to+0.35logits(Fig-
+ure5A).The40-itemabilitycheckagainstthemodel’shistor-
+icalθflags 84% of uniform runs, including every plain- and
+persona-framing uniform run that person-fit misses; com-
+bining the two tests detects 94–97% of sandbagging runs in
+every scope.
+Response fingerprints identify even ability-matched
+model substitutions.A 40-item ability test distinguishes
+99.5% of the 8,911 model pairs in our 134-model cohort on
+at least one benchmark. The remaining 41 ability-matched
+pairs (24 same-vendor snapshots or size variants, 17 cross-
+vendor pairs) still disagree on a median of 1,052 individual
+0.00
+0.05
+0.10Score RMSE
+k = 10 25 50
+Refusal strictness
+10 25 50
+Truthfulness
+10 25 50
+random overtakes
+between k = 50 and 100
+Contextual harm
+10 25 50
+Sign-aligned full suite
+10 25 50 100 200
+0.5
+0.6
+0.7
+0.8
+0.9
+1.0Held-out Spearman ρ
+25 fixed items:
+ρ = 0.94
+~10 adaptive items:
+ρ = 0.92–0.94
+10 25 50 100 200
+TruthfulQA remains
+difficult to compress
+(ρ = 0.71 alone at k = 50)
+10 25 50 100 200
+ 10 25 50 100 200
+Number of items k
+A few dozen informed items recover each ability Adaptive (CAT) Static test Random items
+Figure 3: Held-out recovery of the three latent abilities and the sign-aligned full-suite composite fromkitems, averaged over
+20 splits with 95% confidence intervals. For each target, the upper panel reports score-recovery error (RMSE), our primary
+criterion,andthelowerpanelreportsrankrecovery(Spearmancorrelation).Wecomparecomputerizedadaptivetesting,afixed
+static test, and stratified random subsampling.
+−20 −15 −10 −5 0
+Person-fit lz (lower = more aberrant)
+Genuine cohort
+10% flagged
+Uniform sandbag
+35% flagged
+Targeted sandbag
+90% flagged
+Triggered sandbag
+97% flagged
+Person-fit catches selective sandbagging
+Figure 4: Person-fitlz distributions on HarmBench for the
+genuinecohortandthethreesandbaggingscopes;thedashed
+line marks the calibrated cutoff (10% false-positive rate).
+Selective sandbagging produces aberrant response patterns;
+uniform sandbagging largely does not (Figure 5 shows the
+complementary ability-shift and fingerprint tests).
+items across the full battery, and no cohort pair disagrees
+onfewerthan284(Figure5B).Matchingthe16re-collected
+endpoints to reference responses on 500 pre-selected items
+identifies13of14distinctmodelidentities,andcorrectlyde-
+clines to distinguish two catalog entries that appear to serve
+the same weights (Appendix B).
+0 1 2 3 4
+Δθ vs genuine baseline (logits)
+Triggered
+Targeted
+Uniform
++1.69
++0.24
++0.35
+A Ability shift catches uniform changes
+0 2 4 6 8 10
+Largest |Δθ| across benchmarks (logits)
+0
+1,000
+2,000
+3,000Items where the pair disagrees
+41 ability-matched pairs still
+disagree on median 1,052 items
+8,911 model pairs
+B Fingerprints catch ability-matched changes
+Figure 5: The two audit tests beyond person-fit.(A)Ability
+shift∆θrelative to the genuine baseline, by sandbagging
+scope; uniform sandbagging moves the whole response pro-
+file.(B)Largest per-benchmark ability gap versus total item
+disagreements for all 8,911 cohort pairs; circled points are
+the 41 ability-matched pairs that a 40-item test cannot sepa-
+rate but that still disagree on a median of 1,052 items.
+Discussion
+Safety benchmarks measure different abilities.The
+eight benchmarks cannot be interpreted as interchangeable
+measures of a single safety property. For example, Harm-
+Bench and SORRY-Bench reward largely the same behav-
+ior, while OR-Bench-Hard measures the opposing tendency
+to answer benign requests rather than refuse them. An un-
+weighted average therefore has two problems. First, it gives
+extraweighttobehaviorsmeasuredbyseveralsimilarbench-
+marks. Second, it hides the tradeoff between refusing harm-
+fulrequestsandavoidingunnecessaryrefusals.Amodelcan
+raise its aggregate safety score by refusing more requests
+indiscriminately, even when this makes it less useful on be-
+nign inputs. Any combined score therefore encodes a sub-
+stantive choice about how these outcomes should be valued.
+Evaluators should report distinct abilities when benchmarks
+separate, justify the weights used in any aggregate, and test
+whether a new benchmark measures anything not already
+captured by the suite.
+Distilledtestsenablefrequentevaluation.Reducingsev-
+eralbenchmarksby97–99%makesitmorepracticaltoeval-
+uatemodelsthroughoutdevelopmentratherthanonlybefore
+release. Short tests could be used to compare training inter-
+ventions,monitorindividualcheckpoints,anddetectchanges
+introduced by fine-tuning, quantization, system prompts, or
+minor model updates. They could also allow small laborato-
+ries and independent auditors to evaluate more models with
+limited compute. Similar methods may help expand evalu-
+ation in low-resource languages and settings, although each
+newsettingwouldrequireitsowncalibrationandvalidation.
+These efficiencies do not extend the scope of the underlying
+benchmark. A reduced test shows that the full benchmark
+canbereproducedwithfeweritems;itdoesnotshowthatthe
+benchmark predicts safety in deployment or that the same
+items will remain informative for future models.
+Auditing requires multiple tests.No single audit detects
+everykindofbehavioralchange.Person-fitcatchesselective
+prompted sandbagging by identifying response patterns that
+areinconsistentwithamodel’sestimatedability,butitisless
+effective against uniform sandbagging, which can resemble
+ordinary behavior at a different ability level. Historical abil-
+ity estimates detect these broader shifts, while response fin-
+gerprints distinguish models with similar aggregate abilities
+but different item-level responses. Together, these methods
+form a practical audit ladder: public item parameters sup-
+port person-fit, historical estimates reveal drift, and retained
+responses test whether an endpoint continues to behave like
+the system originally evaluated. This is especially useful for
+hostedAPIs,whereproviderrouting,quantization,inference
+backends, and silent serving changes can alter behavior un-
+der the same model identifier (Khoriaty 2026; Pape, Evertz,
+andSchönherr2026;Kharinaevetal.2025;Gao,Liang,and
+Guestrin 2025). These tests establish behavioral continuity
+rather than the identity of the underlying weights. Finger-
+print comparisons must therefore be calibrated against or-
+dinary variation across repeated measurements of the same
+endpoint,andourexperimentsdonotshowthatthemethods
+would detect a model specifically trained to evade them.
+Safety evaluation requires psychometric validation.
+Safetybenchmarkscoresalreadyinformdecisionswithcon-
+sequences, such as decisions to release models or pick one
+over another. Psychometrics exists because human testing
+faced the same situation—important decisions resting on
+noisy, manipulable measurements, such as the case of eval-
+uating psychomotor and cognitive limits for individuals in
+the military (Draheim et al. 2025). Its response was to make
+validity, reliability, and test security objects of study in their
+ownright.Ouranalysesapplythefirststepsofthatprogram,
+and none of their conclusions are visible in raw pass rates.
+The factor names we assign are summaries of loading pat-
+terns, not necessarily validated constructs. Using them, or
+any benchmark score, as grounds for consequential safety
+claimsrequirestheconvergentandpredictivevalidationevi-
+dencethatpsychometricsrequires,andsafetyevaluationhas
+barely scratched the surface. We hope this work encourages
+both the adoption of these tools and the involvement of re-
+searchers trained in measurement.
+Limitations
+Our cross-benchmark analyses use up to 169 models, of
+which134enterthelatent-structureanalyses;thisislargefor
+an LLM study but smaller than conventional human-testing
+datasets that form the basis of most psychometric analysis.
+This may also influence the interpretation of latent abili-
+ties, which we summarize and label using empirical loading
+patterns but cannot cleanly adjudicate between two or three
+dimensions. Lastly, our sandbagging detection is evaluated
+on prompted model organisms rather than fine-tuned ones,
+which might be easier to catch than scheming models that
+can vary their responses more adversarially across datasets.
+Conclusion
+Psychometrics offers safety evaluation more than compres-
+sion:ameasurementmodelthatsayswhatbenchmarksmea-
+sure, which aggregates are real, how to evaluate at 1–3% of
+thecostwithoutlosingrankingfidelity,andwhenanindivid-
+ualmodel’sresponsesshouldnotbebelieved.Weprovidethe
+calibration,themap,thereducedtests,andtheaudittoolsfor
+eightwidelyusedsafetybenchmarks,andreleaseallartifacts
+for the community to build on.
+Acknowledgments
+We would like to thank Diogo Cruz, Vamshi Bonagiri,
+Cameron Holmes, and others for helpful feedback and dis-
+cussion. We thank the Supervised Program for Alignment
+Research for support. We would also like to thank the UK
+AI Security Institute and the Department for Science, Inno-
+vation, and Technology more broadly for their support.
+References
+Baker, F. B.; and Kim, S.-H. 2004.Item response theory:
+Parameter estimation techniques. CRC press.
+Bean, A. M.; Kearns, R. O.; Romanou, A.; Hafner, F. S.;
+Mayne, H.; Batzner, J.; Foroutan, N.; Schmitz, C.; Korgul,
+K.; Batra, H.; Deb, O.; Beharry, E.; Emde, C.; Foster, T.;
+Gausen, A.; Grandury, M.; Han, S.; Hofmann, V.; Ibrahim,
+L.;Kim,H.;Kirk,H.R.;Lin,F.;Liu,G.K.-M.;Luettgau,L.;
+Magomere,J.;Rystrøm,J.;Sotnikova,A.;Yang,Y.;Zhao,Y.;
+Bibi,A.;Bosselut,A.;Clark,R.;Cohan,A.;Foerster,J.;Gal,
+Y.; Hale, S. A.; Raji, I. D.; Summerfield, C.; Torr, P. H. S.;
+Ududec, C.; Rocher, L.; and Mahdi, A. 2025. Measuring
+what Matters: Construct Validity in Large Language Model
+Benchmarks. arXiv:2511.04703.
+Bock, R. D.; and Aitkin, M. 1981. Marginal Maximum
+Likelihood Estimation of Item Parameters: Application of
+an EM Algorithm.Psychometrika, 46(4): 443–459.
+Cui,J.;Chiang,W.-L.;Stoica,I.;andHsieh,C.-J.2024. OR-
+Bench: An Over-Refusal Benchmark for Large Language
+Models. arXiv:2405.20947.
+Draheim,C.;Sibley,C.;Herdener,N.;Cochrane,A.;Melick,
+S. R.; Strong, K.; and Coyne, J. T. 2025. High-Stakes Psy-
+chomotor Ability Assessment: A Military Selection Case
+Study of Practice Effects in Airplane Tracking Tasks.Cog-
+nitive Research: Principles and Implications, 10(1): 82.
+Drasgow, F.; Levine, M. V.; and Williams, E. A. 1985. Ap-
+propriateness Measurement with Polychotomous Item Re-
+sponse Models and Standardized Indices.British Journal of
+Mathematical and Statistical Psychology, 38(1): 67–86.
+Embretson, S. E.; and Reise, S. P. 2000.Item Response
+Theory for Psychologists. Mahwah, NJ: Lawrence Erlbaum
+Associates.
+Galisai, M.; Cifani, S.; Giarrusso, F.; Bisconti, P.; Prandi,
+M.;Pierucci,F.;Sartore,F.;andNardi,D.2026. Adversarial
+Humanities Benchmark: Results on Stylistic Robustness in
+Frontier Model Safety. arXiv:2604.18487.
+Ganguli, D.; Lovitt, L.; Kernion, J.; Askell, A.; Bai, Y.;
+Kadavath, S.; Mann, B.; Perez, E.; Schiefer, N.; Ndousse,
+K.; et al. 2022. Red Teaming Language Models to Reduce
+Harms: Methods, Scaling Behaviors, and Lessons Learned.
+arXiv:2209.07858.
+Gao, I.; Liang, P.; and Guestrin, C. 2025. Model Equality
+Testing:WhichModelIsThisAPIServing? InInternational
+Conference on Learning Representations.
+Harding,J.;andSharadin,N.2024. WhatisitforaMachine
+Learning Model to Have a Capability?The British Journal
+for the Philosophy of Science.
+Hernández-Orallo, J. 2017. Evaluation in artificial intelli-
+gence: from task-oriented to ability-oriented measurement.
+Artificial Intelligence Review, 48(3): 397–447.
+Hofmann, V.; Heineman, D.; Magnusson, I.; Lo, K.; Dodge,
+J.;Sap,M.;Koh,P.W.;Wang,C.;Hajishirzi,H.;andSmith,
+N. A. 2025. Fluid Language Model Benchmarking. InPro-
+ceedings of the Conference on Language Modeling.
+Horn, J. L. 1965. A Rationale and Test for the Number of
+Factors in Factor Analysis.Psychometrika, 30(2): 179–185.
+Kharinaev,A.;Moskvoretskii,V.;Shvetsov,E.;Studenikina,
+K.;Mikhail,B.;andBurnaev,E.2025. InvestigatingtheIm-
+pactofQuantizationMethodsontheSafetyandReliabilityof
+Large Language Models.arXiv preprint arXiv:2502.15799.
+Khoriaty, M. 2026. Not Pinning Your OpenRouter
+Provider Might Invalidate Your Research. https:
+//www.lesswrong.com/posts/KsyoSAyBRXtwzSugg/not-
+pinning-your-openrouter-provider-might-invalidate-your.
+LessWrong.
+Kipnis, A.; Voudouris, K.; Schulze Buschoff, L. M.; and
+Schulz, E. 2025. metabench: A Sparse Benchmark of Rea-
+soning and Knowledge in Large Language Models. In
+Proceedings of the Thirteenth International Conference on
+Learning Representations. ArXiv:2407.12844.
+Lalor, J. P.; Wu, H.; and Yu, H. 2019. Learning Latent Pa-
+rameters without Human Response Patterns: Item Response
+Theory with Artificial Crowds. InProceedings of the 2019
+ConferenceonEmpiricalMethodsinNaturalLanguagePro-
+cessing.
+Lin,S.;Hilton,J.;andEvans,O.2022. TruthfulQA:Measur-
+ingHowModelsMimicHumanFalsehoods. InProceedings
+of the 60th Annual Meeting of the Association for Computa-
+tional Linguistics, 3214–3252.
+Lord, F. M. 1980.Applications of Item Response Theory
+to Practical Testing Problems. Hillsdale, NJ: Lawrence Erl-
+baum Associates.
+Magis, D.; Yan, D.; and von Davier, A. A. 2017.Computer-
+ized Adaptive and Multistage Testing with R. Springer.
+Maia Polo, F.; Weber, L.; Choshen, L.; Sun, Y.; Xu, G.; and
+Yurochkin, M. 2024. tinyBenchmarks: Evaluating LLMs
+with Fewer Examples. InProceedings of the 41st Interna-
+tional Conference on Machine Learning.
+Martínez-Plumed, F.; Prudêncio, R. B.; Martínez-Usó, A.;
+and Hernández-Orallo, J. 2016. Making sense of item re-
+sponse theory in machine learning. InECAI 2016, 1140–
+1148. IOS Press.
+Mazeika, M.; Phan, L.; Yin, X.; Zou, A.; Wang, Z.; Mu,
+N.; Sakhaee, E.; Li, N.; Basart, S.; Li, B.; Forsyth, D.; and
+Hendrycks, D. 2024. HarmBench: A Standardized Eval-
+uation Framework for Automated Red Teaming and Robust
+Refusal. InProceedingsofthe41stInternationalConference
+on Machine Learning.
+Meijer, R. R.; and Sijtsma, K. 2001. Methodology Review:
+EvaluatingPersonFit.AppliedPsychologicalMeasurement,
+25(2): 107–135.
+Pacchiardi, L.; Voudouris, K.; Slater, B.; Martínez-Plumed,
+F.; Hernández-Orallo, J.; Zhou, L.; and Schellaert, W. 2025.
+PredictaBoard: Benchmarking LLM score predictability. In
+Findings of the Association for Computational Linguistics:
+ACL 2025, 15245–15266.
+Pape,D.;Evertz,J.;andSchönherr,L.2026. TheSilentHy-
+perparameter:QuantifyingtheImpactofInferenceBackends
+on LLM Reproducibility.arXiv preprint arXiv:2605.19537.
+Reckase,M.D.2009.MultidimensionalItemResponseThe-
+ory. Springer.
+Rodriguez, P.; Barrow, J.; Hoyle, A. M.; Lalor, J. P.; Jia,
+R.; and Boyd-Graber, J. 2021. Evaluation Examples Are
+Not Equally Informative: How Should That Change NLP
+Leaderboards? InProceedingsofthe59thAnnualMeetingof
+the Association for Computational Linguistics, 4486–4503.
+Romero-Alvarado, D.; Martínez-Plumed, F.; Pacchiardi, L.;
+Save, H.; Pawar, S. M.; Mehrbakhsh, B.; Casares, P. A. M.;
+Slater, B.; Bova, P.; Romero, P.; et al. 2026. Capabilities
+Ain’t All You Need: Measuring Propensities in AI.arXiv
+preprint arXiv:2602.18182.
+Röttger, P.; Kirk, H. R.; Vidgen, B.; Attanasio, G.; Bianchi,
+F.; and Hovy, D. 2024. XSTest: A Test Suite for Identifying
+Exaggerated Safety Behaviours in Large Language Models.
+InProceedingsofthe2024ConferenceoftheNorthAmerican
+Chapter of the Association for Computational Linguistics.
+Spagliardi, F.; Silva, M.; Datta, A.; Zhou, A.; Bonagiri, V.;
+and Cruz, D. 2026. Efficient Safety Benchmarking via Item
+Response Theory. arXiv:2606.20626.
+van der Weij, T.; Hofstätter, F.; Jaffe, O.; Brown, S. F.;
+and Ward, F. R. 2024. AI Sandbagging: Language
+Models Can Strategically Underperform on Evaluations.
+arXiv:2406.07358.
+Voudouris,K.;Thalmann,M.;Kipnis,A.;Hernández-Orallo,
+J.; and Schulz, E. 2026. Measuring What AI Systems Might
+Do: Towards A Measurement Science in AI.arXiv preprint
+arXiv:2603.00063.
+Wang, Y.; Li, H.; Han, X.; Nakov, P.; and Baldwin, T. 2023.
+Do-Not-Answer: A Dataset for Evaluating Safeguards in
+LLMs. arXiv:2308.13387.
+Weiss, D. J.; and Kingsbury, G. G. 1984. Application of
+Computerized Adaptive Testing to Educational Problems.
+Journal of Educational Measurement, 21(4): 361–375.
+Xie,T.;Qi,X.;Zeng,Y.;Huang,Y.;Sehwag,U.M.;Huang,
+K.; He, L.; Wei, B.; Li, D.; Sheng, Y.; Jia, R.; Li, B.; Li,
+K.; Chen, D.; Henderson, P.; and Mittal, P. 2024. SORRY-
+Bench: Systematically Evaluating Large Language Model
+Safety Refusal Behaviors. arXiv:2406.14598.
+Zhang, Z.; Huang, L.; Wu, G.; et al. 2026. Health-ORSC-
+Bench:ABenchmarkforMeasuringOver-RefusalandSafety
+Completion. arXiv:2601.17642.
+Zou, A.; Wang, Z.; Carlini, N.; Nasr, M.; Kolter, J. Z.; and
+Fredrikson,M.2023.UniversalandTransferableAdversarial
+Attacks on Aligned Language Models. arXiv:2307.15043.
+A Models Evaluated
+Table 3: Full model roster (192 models, OpenRouter identifiers with the developer prefix omitted).† marks the 23 models
+excluded from the cross-benchmark analysis cohort (missing from at least one benchmark); the remaining 169 models form the
+cohortusedforallcross-benchmarkanalyses.Thefullresponseandscoredataareprovidedinthesupplementarycodeanddata
+package.
+DevelopernModels
+Alibaba (Qwen) 36qwen-2.5-72b-instruct,qwen-2.5-7b-instruct,
+qwen-2.5-coder-32b-instruct,qwen-plus,qwen-plus-2025-07-28,
+qwen2.5-vl-72b-instruct,qwen3-14b,qwen3-235b-a22b,
+qwen3-235b-a22b-2507,qwen3-30b-a3b,qwen3-30b-a3b-instruct-2507,
+qwen3-30b-a3b-thinking-2507,qwen3-32b,qwen3-8b,qwen3-coder,
+qwen3-coder-30b-a3b-instruct,qwen3-coder-flash,qwen3-coder-next,
+qwen3-coder-plus,qwen3-next-80b-a3b-instruct,
+qwen3-vl-235b-a22b-instruct,qwen3-vl-30b-a3b-instruct,
+qwen3-vl-32b-instruct,qwen3-vl-8b-instruct,qwen3.5-122b-a10b,
+qwen3.5-27b,qwen3.5-35b-a3b,qwen3.5-397b-a17b,qwen3.5-9b,
+qwen3.5-flash-02-23,qwen3.5-plus-02-15,qwen3.5-plus-20260420,
+qwen3.6-27b,qwen3.6-35b-a3b,qwen3.6-flash,qwen3.6-plus
+Amazon 3nova-2-lite-v1,nova-lite-v1,nova-micro-v1
+Anthropic 6claude-3-haiku,claude-3.5-haiku †,claude-haiku-4.5,claude-opus-4 †,
+claude-sonnet-4†,claude-sonnet-4.5
+Arcee AI 1trinity-mini
+ByteDance 5seed-1.6 †,seed-1.6-flash †,seed-2.0-lite,seed-2.0-mini,ui-tars-1.5-7b
+Cohere 3command-a †,command-r-08-2024,command-r7b-12-2024
+DeepSeek 11deepseek-chat,deepseek-chat-v3,deepseek-chat-v3-0324,
+deepseek-chat-v3.1,deepseek-r1-distill-llama-70b,
+deepseek-r1-distill-qwen-32b†,deepseek-v3.1-terminus,deepseek-v3.2,
+deepseek-v3.2-exp,deepseek-v4-flash,deepseek-v4-pro
+Essential AI 1rnj-1-instruct †
+Google 16gemini-2.0-flash-001 †,gemini-2.0-flash-lite-001 †,gemini-2.5-flash,
+gemini-2.5-flash-lite,gemini-2.5-flash-lite-preview-09-2025,
+gemini-2.5-pro,gemini-3-flash-preview,gemini-3.1-flash-lite,
+gemini-3.1-flash-lite-preview,gemma-2-27b-it,gemma-3-12b-it,
+gemma-3-27b-it,gemma-3-4b-it,gemma-3n-e4b-it,gemma-4-26b-a4b-it,
+gemma-4-31b-it
+Gryphe 1mythomax-l2-13b
+IBM 2granite-4.0-h-micro,granite-4.1-8b
+InclusionAI 2ling-2.6-1t,ling-2.6-flash
+Inflection 2inflection-3-pi †,inflection-3-productivity †
+Kwaipilot 1kat-coder-pro-v2
+Liquid AI 2lfm-2-24b-a2b,lfm-2-24b-a2b-20260224
+Meta 11llama-3-70b-instruct †,llama-3-8b-instruct,llama-3.1-70b-instruct,
+llama-3.1-8b-instruct,llama-3.2-11b-vision-instruct,
+llama-3.2-1b-instruct,llama-3.2-3b-instruct,llama-3.3-70b-instruct,
+llama-4-maverick,llama-4-scout,llama-guard-4-12b
+Microsoft 3phi-4,phi-4-mini-instruct,wizardlm-2-8x22b
+MiniMax 6minimax-01,minimax-m2,minimax-m2-her,minimax-m2.1,minimax-m2.5,
+minimax-m2.7
+Mistral AI 19codestral-2508,devstral-2512,devstral-small †,ministral-14b-2512,
+ministral-3b-2512,ministral-8b-2512,mistral-7b-instruct-v0.1 †,
+mistral-large,mistral-large-2512,mistral-medium-3,
+mistral-medium-3.1,mistral-nemo,mistral-saba,
+mistral-small-24b-instruct-2501,mistral-small-2603,
+mistral-small-3.1-24b-instruct,mistral-small-3.2-24b-instruct,
+mixtral-8x22b-instruct,voxtral-small-24b-2507
+Moonshot AI 4kimi-k2,kimi-k2-0905,kimi-k2.5,kimi-k2.6
+DevelopernModels
+Nex AGI 1deepseek-v3.1-nex-n1 †
+Nous Research 5hermes-2-pro-llama-3-8b †,hermes-3-llama-3.1-405b,
+hermes-3-llama-3.1-70b,hermes-4-405b,hermes-4-70b
+NVIDIA 4llama-3.3-nemotron-super-49b-v1.5,nemotron-3-nano-30b-a3b,
+nemotron-3-super-120b-a12b,nemotron-nano-9b-v2 †
+OpenAI 17gpt-3.5-turbo,gpt-3.5-turbo-0613 †,gpt-3.5-turbo-16k,gpt-4-turbo,
+gpt-4.1†,gpt-4.1-mini,gpt-4.1-nano,gpt-4o,gpt-4o-mini,
+gpt-4o-mini-2024-07-18,gpt-5-mini,gpt-5-nano,gpt-5.4-nano,
+gpt-oss-120b,gpt-oss-20b,o3-mini,o4-mini
+Perceptron 1perceptron-mk1
+Perplexity 1sonar
+Prime Intellect 1intellect-3 †
+Reka AI 2reka-edge,reka-flash-3
+Sao10K 1l3-lunaris-8b
+StepFun 2step-3.5-flash,step-3.7-flash
+Tencent 2hunyuan-a13b-instruct,hy3-preview
+TheDrummer 1rocinante-12b
+Upstage 1solar-pro-3
+xAI 3grok-4.20,grok-4.3,grok-build-0.1
+Xiaomi 3mimo-v2-flash †,mimo-v2.5,mimo-v2.5-pro
+Z.ai 12glm-4-32b †,glm-4.5,glm-4.5-air,glm-4.5v,glm-4.6,glm-4.6v,glm-4.7,
+glm-4.7-flash,glm-5,glm-5-turbo,glm-5.1,glm-5v-turbo
+B Sandbagging and API Auditing Details
+Detection Operating Characteristics
+All detection rates in the main-text audit results use a sin-
+gle operating point: a run is flagged whenlz ≤ −0.87, the
+10thpercentileofthe171genuinecohortmodels,i.e.a10%
+false-positive rate. Figure 6A shows the full ROC curves.
+By framing (plain, persona, incentive), person-fit flags 91%
+(10/11), 100% (10/10), and 80% (8/10) of targeted runs;
+100% (10/10), 100% (10/10), and 90% (9/10) of triggered
+runs; and 18% (2/11), 20% (2/10), and 70% (7/10) of uni-
+form runs. The pooled rates in the main text aggregate these
+unequal run counts.
+The detections are not an artifact of the item budget. Re-
+peatingtheauditwitha100-itemsubsampleofHarmBench’s
+standard-categorypoolinsteadofall196post-preprocessing
+items leaves the plain-framing operating points essentially
+unchanged: targeted runs are flagged at 11/11 (versus 10/11
+at the full budget) and uniform runs at 1/11 (versus 2/11;
+Figure 6B).
+Fingerprint Null Calibration and Drift
+An endpoint does not reproduce its own responses ex-
+actly, so fingerprint audits need a null distribution for
+self-disagreement. Under a stable classifier judge (Do-Not-
+Answer),endpointsdisagreewiththemselvesonamedianof
+2.8%ofitemsacrossrepeatedcollections.Underathreshold-
+sensitive similarity judge (TruthfulQA), the median rises to
+25%. This variability depends on provider routing, genera-
+tion stochasticity, item difficulty, and the judging procedure,
+sothenullmustbecalibratedwithrepeatedcollectionsonthe
+same audit items and the same scoring pipeline (Figure 7).
+Againstthesenulls,cross-modeldisagreementiswellsep-
+arated from self-disagreement for 13 of the 14 distinct iden-
+tities in the re-collection experiment. The two catalog en-
+tries that the procedure declines to separate agree with one
+another (8.0–9.4% disagreement) more closely than either
+agrees with itself across repeated runs (10.0–10.2%), con-
+sistent with both entries serving the same weights.
+The same reference responses support drift audits. One
+endpoint disagrees with its own reference responses from
+two months earlier on 33.6% of TruthfulQA items, against
+a resampling null of 2.0%. This change is inconsistent with
+ordinaryendpointvariabilityunderthecalibratednullandin-
+dicatesthatthebehaviorassociatedwiththemodelidentifier
+changed between collections.
+C Fitting Multidimensional IRT Models
+Ourmainanalysisistwo-stage.Wefitaunidimensional2PL
+to each benchmark, obtain one ability per model per bench-
+mark,andfactor-analyzetheresulting134×8abilitymatrix.
+A natural alternative is multidimensional IRT (MIRT): fit
+P(x mj = 1) =σ(a ⊤j θm +d j)with a vector-valued ability
+θm directly to the item matrix, so the latent structure is esti-
+matedinonestep.Thisappendixexplainswhythetwo-stage
+designestimatesthesamequantityandreportsadirectMIRT
+fit that reaches the same conclusions.
+0.0 0.2 0.4 0.6 0.8 1.0
+False-positive rate (171 genuine models)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Detection rate
+chance
+calibrated cutoff
+lz ≤ − 0.87 (10% FPR)
+97%
+90%
+35% pooled
+(18–70% by framing)
+A Full 196-item budget, three framings pooled
+Uniform (n=31)
+Targeted (n=31)
+Triggered (n=30)
+0.0 0.2 0.4 0.6 0.8 1.0
+False-positive rate (171 genuine models)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Detection rate
+targeted: 10/11 at 196 items,
+11/11 at 100 items
+uniform: 2/11 at 196 items,
+1/11 at 100 items
+triggered runs exist only
+at the 196-item budget
+B Item budget: 196 vs 100 items, plain framing
+Uniform (n=11)
+Targeted (n=11)
+196 items
+100 items
+Figure 6: Person-fit detection of sandbagging on Harm-
+Bench.(A)ROC curves per sandbagging scope with the
+three prompt framings pooled; dots mark the calibrated cut-
+off (lz ≤ −0.87, 10% false-positive rate over 171 genuine
+models).(B)The same audit at a 100-item budget (dashed)
+versus the full 196-item budget (solid), plain framing.
+The Two-Stage Design Is a Constrained MIRT
+Model
+Consider the MIRT model in which each item loads only on
+its own benchmark’s dimension, with the eight dimensions
+freely correlated:θm ∼ N(0,Φ), whereΦis the8×8abil-
+itycorrelationmatrix.Withinabenchmark,responsesfollow
+a unidimensional 2PL; across benchmarks, all dependence
+runs throughΦ. Under this model, calibrating each bench-
+markseparatelylosesnoinformationaboutitemparameters,
+because the per-benchmark likelihoods are the joint model’s
+marginals. The second-stage factor analysis then estimates
+the structure ofΦfrom the ability estimates.
+The two-stage estimate ofΦconverges to the truth as the
+number of items per benchmark grows, and our benchmarks
+Same endpoint,
+re-collected (n=16)
+Different endpoint,
+same items (n=240)
+median 2.8%
+median 10.4%
+two gpt-4o-mini catalog ids (same weights):
+0.8–1.6%, inside the self-null
+A Classifier judge (Do-Not-Answer, Longformer)
+0 10 20 30 40 50
+Response disagreement between two collections
+(% of 250 pinned items)
+Same endpoint,
+re-collected (n=16)
+Different endpoint,
+same items (n=240)
+median 25.2%
+median 39.2%
+drift case: llama-3-8b probed against its own
+two-month-old reference — 33.6% (self-null 2.0%)
+B Similarity judge (TruthfulQA, BLEURT)
+Figure 7: Fingerprint self-disagreement nulls versus cross-
+model disagreement under a classifier judge (Do-Not-
+Answer) and a similarity judge (TruthfulQA), with the alias
+pair and the drift case marked.
+contribute200–1,318itemseach.Theresidualmeasurement
+errorintheabilityestimatesattenuatesthesecond-stagecor-
+relations toward zero. This biases the analysisagainstthe
+shared structure we report, so the factor correlations re-
+portedinthemaintextareconservative.Thesameseparation
+of within-benchmark calibration from between-benchmark
+structure is used by metabench (Kipnis et al. 2025).
+One assumption carries the argument: no item loads on
+more than one ability. If an item rewarded two abilities at
+once—say, a harm item that also rewards truthfulness—the
+per-benchmark ability would blend the two, and the second-
+stage factors could be distorted. An unconstrained MIRT fit
+tests exactly this assumption, so we run one.
+An Unconstrained MIRT Fit Reaches the Same
+Conclusions
+WefitexploratoryMIRTmodelswithunconstrainedloadings
+andθ∼ N(0, ID)tothe134×5,055itemmatrix(theitems
+retaining response variation within this cohort) atD= 1
+to4. We compare dimensionalities by 5-fold cross-validated
+held-outlog-likelihoodovermodels:itemparametersarecal-
+ibrated on the training folds, and we evaluate the marginal
+likelihood of held-out models’ complete response patterns
+without refitting any per-model parameters. Estimation uses
+Bock–Aitkin full-information EM (Bock and Aitkin 1981)
+onaprunedGauss–Hermitegrid,echelonconstraintsforro-
+tational identification, and aN(0,1.52)prior on loadings—
+the multidimensional analogue of the calibration priors in
+Materials & Methods. The implementation reproduces our
+unidimensional 2PL exactly atD= 1and matches an inde-
+pendentMIRTpackageonsynthetictwo-factordata(loading
+congruence1.000).
+DCV loglik In-sample AIC BIC
+1−281,521−266,294 552,807 582,104
+2−266,803−248,299 526,926570,869
+3−260,009−237,002 514,439 573,025
+4−257,724−229,606509,751582,976
+Table 4: Item-level MIRT model comparison on the134×
+5,055matrix(boldmarksthebestvaluepercriterion).Held-
+outlikelihoodimprovesby14,718natsatD=2and6,794at
+D=3, then flattens (+2,286atD=4); BIC is minimized at
+D=2. In-sample AIC never turns, which is why an out-of-
+sample criterion is necessary with up to∼25k free parame-
+ters.
+−280
+−270
+−260
+Held-out log-lik.
+(thousand nats)
+best
++14,718 nats
++6,794
++2,286
+higher is better
+A
+1 2 3 4
+Number of dimensions D
+570
+580
+BIC
+(thousands)
+BIC minimum: D = 2
+lower is better
+B
+Figure 8: Item-level MIRT model comparison: cross-
+validated held-out log-likelihood(A)and BIC(B)across la-
+tentdimensionalityD.Held-outlikelihoodimprovessharply
+toD=3and only marginally atD=4; BIC is minimized at
+D=2.
+The unconstrained fit agrees with the two-stage analysis
+on the points of substance (Table 4). Both criteria reject a
+single dimension decisively. BIC is minimized atD= 2,
+and the held-out gains shrink from14,718nats atD=2to
+6,794atD=3and2,286atD=4, consistent with the two-
+stageconclusionthatatleasttwodimensionsarerobustanda
+thirdaddsmodestfurtherstructure.Itemloadingsaggregated
+bybenchmarkrecoverthebenchmark-levelstructure,includ-
+ingthebipolarrefusal-strictnessaxis,whichappearsalready
+atD= 1(HarmBench+0.92, SORRY-Bench+0.90ver-
+susOR-Bench-Hard−0.64).Apermutationparallelanalysis
+(Horn1965)ontheitemcorrelationspectrumgivesanupper
+1 2 3 4
+Factors
+0.6
+0.8
+1.0
+.95
+A
+CFI (fit; higher is better)
+.97
+1 3 5 8
+Component
+0
+2
+4
+chance
+(95th pct of random)
+B
+Parallel analysis: 3 exceed chance
+How many abilities? Fit criteria say three
+Figure 9: Model selection for the number of latent abilities.
+(A)CFIfirstexceedstheconventional0.95thresholdatthree
+factors.(B)Horn’s parallel analysis (minimum-residual):
+threeeigenvaluesexceedthe95thpercentileofmatchedran-
+dom data. Shading marks the selected three-factor solution.
+bound of 22 components; permutation bounds over-count
+when models are far fewer than items, and the eigenvalue
+spectrum itself shows two dominant components with a vis-
+ible third step.
+We report the two-stage analysis in the main text for two
+reasons.Itsper-benchmarkabilitiesaredirectlyinterpretable,
+and its estimates are stable at our cohort size, where the
+unconstrained fit spends up to∼25k parameters on 134 re-
+sponse patterns. The item-level fit serves as the robustness
+check:thesimple-structureconstraintisnotdrivingthecon-
+clusions.
+D Latent Factor Explorations
+Factor-Count Selection Criteria
+Weretainfactorsusingthreestandardcriteria.RMSEAmea-
+suresabsolutemisfitofthefactormodeltotheobservedcor-
+relationmatrix,withvaluesbelow0.06conventionallytaken
+as close fit. CFI compares the fitted model against an in-
+dependence baseline, with values above0.95conventionally
+taken as acceptable. Horn’s parallel analysis retains a factor
+when its observed eigenvalue exceeds the 95th percentile of
+eigenvaluesatthesamerankinrandomdataofmatchedsize.
+On our eight-indicator ability matrix, the criteria do not
+agree perfectly. CFI and minimum-residual parallel analy-
+sis both select three factors. The PCA variant of parallel
+analysis, which tends toward under-extraction, retains two.
+RMSEAimprovesmonotonicallywitheachaddedfactorbut
+reaches close fit at no solution, a known limitation with few
+indicators. We therefore treat multidimensionality, with at
+least two latent abilities, as the robust conclusion, and use
+Composite Signed¯ρRecovery @ 25
+Refusal axis (ORB flipped)+0.78 0.96
+{AdvBench, Health-ORSC}+0.58 0.91
+Harm cluster (5 benchmarks)+0.57 0.92
+{DNA, TruthfulQA}+0.52 0.85
+All 8, raw mean+0.10 0.79
+{ORSC, ORB, TQA}−0.16 0.69
+Refusal trio, raw mean−0.18 0.79
+Table 5: A composite can be recovered from few items ex-
+actly when its members agree in sign. Signed¯ρis the mean
+pairwiseabilitycorrelationamongmembers(afteranyflips);
+recovery is held-out Spearman from 25 adaptively chosen
+items (20 splits). Rank correlation between the columns:
+0.93.
+the three-factor solution to describe the additional structure
+supported by CFI and parallel analysis.
+Composite Scores Require Aligned Directions
+The latent structure also determines which benchmark aver-
+ages define coherent quantities.
+Suppose a composite combines benchmarks that all in-
+crease with the same underlying ability. Models that score
+highly on one member should tend to score highly on the
+others, and a small subset of items should preserve the re-
+sultingmodelranking.Ifsomebenchmarkspointinopposite
+directions, averaging them cancels part of the shared signal.
+A related tension appears between AHB and TruthfulQA,
+whose model abilities correlate atρ=−0.56: high perfor-
+mance on one safety benchmark can therefore predict lower
+performance on another.
+Table 5 shows this relationship across seven composites.
+For each composite, we calculate the mean signed corre-
+lation among its constituent benchmark abilities. We then
+measure how well 25 adaptively selected items recover the
+fullcomposite.Therankcorrelationbetweensignagreement
+and recovery is0.93.
+The refusal benchmarks provide a matched comparison.
+The raw refusal composite combines HarmBench, SORRY-
+Bench, and OR-Bench-Hard without changing their orienta-
+tions. Because OR-Bench-Hard measures the opposite end
+ofrefusalstrictness,itssignalpartiallycancelstheothertwo.
+The resulting composite has a mean signed correlation of
+−0.18and a recovery correlation ofρ= 0.79.
+We then reverse OR-Bench-Hard so that all three bench-
+marks point toward the same end of the refusal-strictness
+axis. The constituent benchmarks remain unchanged; only
+the orientation of one score differs. The mean signed cor-
+relation rises to0.78, and recovery rises toρ= 0.96, the
+highest value among the composites considered.
+The same adjustment improves the full eight-benchmark
+composite. Flipping OR-Bench-Hard before averaging im-
+proves every item-selection method we test. Under ran-
+dom subsampling, recovery from 25 items increases from
+ρ= 0.65toρ= 0.82.Inthissetting,correctingthecompos-
+ite produces a larger gain than replacing random sampling
+∆AIC vs. 2PL∆BIC vs. 2PL LRTp
+Benchmark 1PL 3PL 4PL 1PL 3PL 4PL 2PL→3PL
+AdvBench+1005 +1132 +2834−632 +2772 +6113 1.0
+HarmBench+615−60+895−304 +863 +2741 8×10 −29
+SORRY-Bench+1088 +450 +1090−280 +1821 +3832.65
+Do-Not-Answer+903 +1066 +3284−1560 +3532 +8217 1.0
+AHB+578 +603 +2049−1539 +2723 +6289.03
+OR-Bench-Hard+787 +2880 +5756−3319 +6990 +13975 1.0
+Health-ORSC+748 +183 +400 +125 +809 +1652.20
+TruthfulQA+460 +1554 +2997−2089 +4106 +8102 1.0
+Table 6: Model comparison for the nested PL ladder, per
+benchmark. Negative values favor the alternative over the
+2PL (bold: the single case). The 1PL→2PL likelihood-ratio
+test rejects the 1PL on every benchmark atp <10−109 and
+is omitted from the table.
+with any of the tested item-selection algorithms.
+The order of operations therefore matters. Before opti-
+mizing which items to administer, one must first determine
+whether the target score combines compatible dimensions
+andwhetheritscomponentsareorientedconsistently.Amore
+efficient estimate of an incoherent composite remains an in-
+coherent composite.
+E Why the 2PL
+We compare the nested 1PL/2PL/3PL/4PL ladder on each
+benchmark separately, fitting each model by marginal max-
+imum likelihood on the same cleaned matrices used for
+the main calibration (per-benchmark gap-free models, post-
+preprocessing items). The asymptote parameters of the 3PL
+and4PLcarrythefittinglibrary’sdefaultBetapriorstokeep
+themintheunitinterval,sothosetwofitsareMAPratherthan
+ML and their criteria are approximate; the 2PL→3PL and
+3PL→4PL likelihood-ratio tests also place the constrained
+parameter on its boundary, which makes theχ2 reference
+conservative. BIC uses the number of models asn, the stan-
+dard convention for marginal-likelihood fits.
+Three conclusions follow (Table 6). First, the 1PL is re-
+jected decisively: the likelihood-ratio test rejects the equal-
+discrimination constraint on all eight benchmarks, and AIC
+agrees everywhere. BIC alone prefers the 1PL on seven
+benchmarks, which reflects its penalty oflog(n)per param-
+eter atn≈170models applied to 200–1,300 additional
+discriminationparametersratherthanasubstantiveendorse-
+ment: equal discriminations contradict the roughly order-of-
+magnitude spread in fitted values, and would eliminate the
+information weighting that the item selection in our distilla-
+tion analyses relies on.
+Second,the3PLimprovesAIConexactlyonebenchmark,
+HarmBench(−60,LRTp≈10 −28),plausiblybecausejudge
+leniency on some items acts like a nonzero floor on the pass
+probability. The marginal AHB test (p=.03) is not cor-
+roborated by AIC. Third, the 4PL is never preferred, and on
+severalbenchmarksitsfittedlikelihoodfallsbelowthe3PL’s,
+which is impossible at a maximum-likelihood optimum; the
+added asymptotes make the optimization fail rather than the
+fitbetter,theexpectedoutcomeofmodelswithupto∼5,000
+parameters on∼170response patterns.
+The unregularized 2PL and richer fits also reach the iter-
+ation cap on most benchmarks, the divergent-discrimination
+pathology that motivates the calibration priors in Materials
+&Methods;itaffectsallrungsabovethe1PLalikeanddoes
+not change any verdict. We therefore use the 2PL through-
+out, regularized as described there. A pass-probability floor
+for judge-mediated benchmarks may nonetheless be worth
+revisiting at larger cohort sizes.

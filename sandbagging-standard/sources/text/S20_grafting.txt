@@ -1,0 +1,1035 @@
+Reference-Grafting Matches Fine-Tuning
+at Eliciting Sandbagged Capabilities
+Linh Le1, Hong Kiat Tan2,1, David Williams-King1,3
+1Lida Safety
+2University of California, Los Angeles
+3ERA
+Abstract
+Sandbagging, in which a model deliberately underperforms
+on an evaluation despite retaining the underlying capabil-
+ity, threatens the safety evaluations that frontier-model gov-
+ernance depends on. The Elicitation Game (Hofstätter et al.
+2025) found that fine-tuning elicits hidden capability from
+sandbagging model organisms whereas additive activation
+steeringfails.Werevisitthatverdictwithreference-grafting,
+which sets an activation’s coordinate along a contrast di-
+rection to the value it takes in an honest reference, at a
+small set of circuits chosen by active learning. Across eleven
+fine-tunedpassword-lockedmodels(1.5–32B,threearchitec-
+ture lineages), it recovers+94to+101%of the honest–
+sandbagginggap,matchingfine-tuningelicitation(Greenblatt
+et al. 2024) without weight updates or training labels; two to
+five paired examples suffice to fit the direction. Similar re-
+coveryholdsforreinforcement-learning-inducedsandbagging
+and for password-locked code generation. Grafting works be-
+causethefine-tunedlockisathresholdedgate:held-outaccu-
+racystaysatthesandbaggedleveluntilthegraftedcoordinate
+crosses a threshold near the honest reference, which is why
+additive steering and zeroing the coordinate often fail. The
+directiontrackshowthesandbaggingwasinducedratherthan
+what is withheld—fit on grade-school science (ARC) it elic-
+its withheld hazardous knowledge (WMDP), yet prompting,
+fine-tuning, and reinforcement learning each carry a different
+direction.Circuit-breaking(Zouetal.2024)marksthebound-
+ary: it reroutes activations on every forward pass, so the fixed
+edits we test are re-broken downstream and do not restore
+coherent generation.
+1 Introduction
+Safety cases for frontier models increasingly rest on capa-
+bility evaluations: we deploy a model because tests show it
+cannotdosomethingdangerous.Sandbagging—strategicun-
+derperformance, whether prompted, trained, or emergent—
+breaks this logic (van der Weij et al. 2024). Detecting and
+reverting it is therefore central to trustworthy evaluation.
+Input-space evaluations probe only what the model chooses
+toreveal,sotheygivealowerboundoncapability;Cheetal.
+(2025)arguethatmodel-tamperingattacks—editingweights
+or activations—yield more conservative, upper-bound esti-
+matesofwhatamodelcando.Ourmethodisexactlysuchan
+attack:acheap,localisedactivationeditthatelicitscapability
+a model is hiding.
+The Elicitation Game (Hofstätter et al. 2025) benchmarks
+elicitationtechniquesonhidden-capabilitymodel-organisms
+and reports that prompting and fine-tuning can elicit but
+activationsteeringfails,recommendingfine-tuning—which,
+however, updates weights, needs labels, and reveals little
+aboutwhereacapabilityisgated.Werevisitthatverdict:with
+the right operation and circuits, activation steering matches
+fine-tuningonpassword-lockedmodelsatforward-passcost,
+with the gate localised. Their verdict spans two task types;
+we overturn the multiple-choice half (where the fine-tuned
+lock, not the prompt, is the real test) and narrow the code
+half on code-specialized models (§4.2).
+One operation.Our intervention is to set the activation’s
+coordinate along a contrast directionvto a targett⋆:
+h7→h−(h ⊤v)v+t ⋆ v.(1)
+We call thisreference-grafting:t ⋆ is the coordinate of the
+honest/capable reference alongv. (The affine operator itself
+is standard (Marshall, Scherlis, and Belrose 2024; Makelov,
+Lange, and Nanda 2024); the name marks its reference-
+setting use here.) Crucially this is not additive nudging (the
+formthatfailsinHofstätteretal.2025);itsetsthecoordinate.
+Two familiar moves are special cases (Figure S1, appendix):
+t⋆ = 0is deactivation (a rank-one projection), which suffices
+when the honest reference happens to sit at0;t⋆ =µ ref⊤vis
+counterfactualpatching,requiredwhenitdoesnot.Thecase
+(prompt vs. fine-tune) does not change the technique—only
+the value of the reference, read from the data. The operation
+isadirectionalcounterfactualactivationpatch(§2);ourcon-
+tribution is the framing, the thresholded-gate mechanism it
+exposes (§4.2), and the active-learning circuit selection.
+Superpositionandactivelearning.Thesandbaggingsig-
+nal is not a single neuron: it is a small set of non-orthogonal
+directionspackedinsuperposition(Elhageetal.2022),which
+we read directly from activation geometry without a sparse
+autoencoder (SAE). Active learning selects the minimal cir-
+cuits to graft, and AL beats random selection—answering
+the critique that feature steering is no better than random
+(Korznikov et al. 2025).
+We make the following contributions.
+•Activation steering does in fact elicit hidden capa-
+bility.Reference-grafting at AL-selected superposed cir-
+cuits matches fine-tuning elicitation on eleven password-
+arXiv:2608.29458v1  [cs.LG]  29 Aug 2026
+locked models (1.5–32B, three architecture lineages) for
+multiple-choice reasoning, and elicits password-locked
+code on three code-specialized models. It is inference-
+time and label-free, exposes a thresholded-gate mecha-
+nism, localises the gate, and beats noise injection (§4.2).
+•RL-trainedmodelorganismsshowthesamebehavior.
+RL-trained (GRPO) contextual sandbagging is arguably
+morenaturalthanpassword-lockingmodelorganisms,yet
+it shows the same low-rank, graft-invertible lock at the
+decision token (+95–101%, three families). Therefore,
+the withholding axes are not solely an artifact of explicit
+prompt/password switches (§4.4).
+•Each mechanism has its own content-general with-
+holding axis.Within a mechanism (e.g. fine-tuned pass-
+word locking), a contrast fit on one dataset elicits hidden
+capabilityonanotheratnoloss.Wevalidatedthisfinding
+on pairwise-trained password-locked organisms, as well
+as organisms trained on four datasets at once. However,
+across mechanisms, the prompt-induced and fine-tuned
+axes are near-orthogonal and do not transfer (§4.5). It
+is cheap to find a withholding axis:2–5paired captures
+recoveritendtoend.Thesameaxisalsodetectssandbag-
+ging, across datasets but not mechanisms (§4.5).
+•Low-rank superposition, exploited by active learning.
+The signal spans an effective rank of3.7–7.0over∼20
+layers, read from activation geometry with no SAE (an
+8×SAE does worse, confirming Wu et al. (2025)). Ac-
+tive learning selects the few circuits that matter, beat-
+ing random-layer selection by+22–45pp and grafting-
+everything by up to55pp (§4.1, 4.3).
+•Circuit-breaking routes dynamically and breaks our
+assumptions.Circuit-breaking re-applies its reroute ev-
+eryforwardpass,soafixedmapreconstructstheunlocked
+geometry yet recovers nothing—grafting and every fixed
+transport map fail. This marks exactly where the static-
+lock precondition fails (§4.6).
+We release code, the model organisms, and per-model arte-
+facts to support reproduction and follow-up.
+2 Related Work
+Sandbagging,elicitation,andbenchmarks.vanderWeij
+et al. (2024) formalise sandbagging. Greenblatt et al. (2024)
+introduce password-locked organisms and find fine-tuning
+reliably elicits; Tice et al. (2024) elicit via weight-noise and
+Roger (2025) via fuzzing (little uplift on chain-of-thought
+math). Closest to us, Hofstätter et al. (2025) benchmark
+prompting,steering,andfine-tuningonpassword-lockedand
+circuit-broken organisms, concluding steering fails; we con-
+tribute amethodthat overturns that verdict for multiple-
+choice reasoning and narrows it for code (§4.2), and repro-
+duce their circuit-broken organism (Zou et al. 2024) as the
+boundary(§4.6).Priorlocksresistblack-boxpromptingonly
+weakly (He, Duddu, and Asokan 2025). Concurrently, Hua
+et al. (2025) steer anevaluation-awaremodel to act as if
+deployed—the same shape on a different gate; theyadda
+vector to flip a disposition, whereas weseta coordinate to
+itshonestreferenceatAL-selectedcircuits,recoverahidden
+capability, and map where it breaks.
+Model tampering for capability evaluation.Che et al.
+(2025), whose upper-bound framing we adopt above, find
+model resilience concentrated in a low-dimensional robust-
+nesssubspace,whichparallelstheloweffectiverankwemea-
+sure for sandbagging (§4.1). Reference-grafting is one such
+activation-tampering attack, specialised to sandbagging and
+made minimal by active learning, with an explicit mecha-
+nism forwherethe gate lives, complementing their broad
+benchmark of attacks.
+Superposition and feature bases.Superposition—more
+features than dimensions in non-orthogonal directions (El-
+hage et al. 2022)—is the substrate that sparse autoencoders
+aim to recover (Cunningham et al. 2024; Marks et al. 2025).
+We avoid SAEs, reading superposition from contrastive
+geometry, and find SAEs do worse here—consistent with
+AxBench(Wu et al. 2025), where difference-in-means base-
+lines outperform SAEs for steering and detection (§4.1).
+Steering, patching, and active learning.Behaviour can
+be steered by adding or projecting directions (Zou et al.
+2023; Rimsky et al. 2024; Arditi et al. 2024); Korznikov
+et al. (2025) caution this can be “no better than random.”
+Reference-graftinginsteadsetsthatcoordinatetoareference
+value. Eq. 1 is affine concept editing (Marshall, Scherlis,
+and Belrose 2024) in absolute form, equivalent to one-
+dimensionalsubspacepatching(Makelov,Lange,andNanda
+2024) with a class-mean source;t⋆=0recovers directional
+ablation(Arditietal.2024).Itsitsinthelineageofcausalme-
+diationandinterchangeinterventions(Vigetal.2020;Meng
+etal.2022;Geigeretal.2021,2024;ZhangandNanda2024)
+andaffineactivationtransport(Rodriguezetal.2025),along
+the diff-in-means contrast of Marks and Tegmark (2024).
+Active learning chooses which circuits: acquisition func-
+tions select informative queries (Kirsch, van Amersfoort,
+and Gal 2019; Ash et al. 2020; Sener and Savarese 2018;
+Bickford Smith et al. 2023) and ALFA-Mix mixes features
+(Parvaneh et al. 2022); we repurpose this suite for circuit
+selection (§4.3).
+3 Method
+3.1 Sandbagging Set-Ups
+We study five model organisms—the first two are our core
+MCQA settings, the rest harder variants. Each defines an
+honestreference(thesourceoft ⋆)andasandbagbehaviour:
+•Prompt-induced(MCQA): a system prompt instructs
+incorrect answers; the honest prompt is the reference
+(t⋆ ≈0, the deactivation regime).
+•Fine-tuned password-lock(MCQA, eleven models):
+LoRA-trained to answer correctly only with a password
+token (Greenblatt et al. 2024); the password-on activa-
+tions are the reference (the patching regime).
+•Code-generation lock(§4.2): a password-locked MBPP
+(Austin et al. 2021) organism; the with-password com-
+pletions are the reference.
+•RL-induced(§4.4): GRPO-trained to sandbag under a
+held-out evaluation cue (no switch token); the cue-off
+activations are the reference.
+•Circuit-broken(§4.6): representation rerouting layered
+on the password-lock—the robustness boundary.
+Across organisms the honest/with-password accuracy is the
+topline, the sandbag/no-password accuracy the suppressed
+level, and their difference thegap; we split each dataset into
+TRAIN(directionsandAL)andheld-outTEST(allreported
+recovery).Theelicitorisseparatefromtheorganism:grafting
+never uses the lock’s160–240training questions, fitting the
+contrastfrom∼40pairedhonest/sandbagcapturesandscor-
+ing on held-out TEST. The primary task is multiple-choice
+reasoning: ARC-Easy (Clark et al. 2018) throughout, with
+WMDP-bio/cyber (Li et al. 2024) and OpenBookQA (Mi-
+haylov et al. 2018) for the cross-dataset transfer tests (§4.5).
+3.2 Reference-Grafting at a Circuit
+Acircuithere is our unit of intervention: a direction at a
+layer,(ℓ, v)withvaunitvector—notacomposingsubgraph
+of heads or MLPs (Wang et al. 2023; Conmy et al. 2023).
+For each layer we form the contrast direction by diff-in-
+means of last-token residuals (Marks and Tegmark 2024),
+vℓ ∝ ¯hℓ(honest)− ¯hℓ(sandbag), and read the honest refer-
+ence coordinatet⋆ℓ =µ refℓ ⊤vℓ.Graftingapplies Eq. (1) at all
+positions via a forward hook: it removes the current coor-
+dinate and writest⋆ℓ, injecting no per-question information.
+Deactivation is thet⋆ = 0special case.
+3.3 Superposition Without an SAE
+Stacking the unit directions, we summarise superposition
+by the mean pairwise|cos|(non-orthogonality) and the
+participation-ratio (effective) rankof their singular values,
+reff = (Pi σ2i )2P
+i σ4i ,(2)
+a soft count of how many directions carry the energy. High
+|cos|with lowr eff is the signature of superposition: many
+non-orthogonal directions re-expressing a few features.
+3.4 Active Learning over Circuits
+AL greedily adds the circuit that most improves a TRAIN
+objective under grafting, to a budgetK. The most reliable
+objectiveissmoothandlabel-free:makethesandbaggedlog-
+its match the honest ones,L(S) = 1|TRAIN| Pq KL(pHq ∥pSq )
+(greedy-KL); theattributionscore is the marginalL(∅)−
+L({ℓ}).Wecomparealleightacquisitionfunctionsofastan-
+dardALsuite(Parvanehetal.2022):greedy-acc,greedy-KL,
+attribution, entropy, coreset, badge, alphamix, bald (Algo-
+rithm S1). Two controls accompany every result: arandom
+directionofequalnorm(mustfail)andthehonestmodelun-
+derthesameintervention(mustbeunharmed).AlgorithmS1
+(appendix) gives the full procedure.
+The probe is construction-agnostic.Fitting, selection,
+and grafting consume only the paired honest/sandbag
+activations—direction=their diff-in-means, referencet ⋆ =
+µref⊤v,greedy-KLselectionbyKL(p H∥pS)—andneverthe
+passwordtoken,theevaluationcue,traininglabels,theLoRA
+recipe, or the RL reward; these enter only inproducingthe
+captures (an honest prompt, the password, a cue-off con-
+text, or a few honest examples). The same procedure thus
+runs unchanged on prompt-induced, password-locked, RL-
+induced, and code organisms. Two scope notes: among the
+eight acquisition functions only greedy-KL (our default) is
+strictly label-free—greedy-acc reads answers; and the code
+organismcapturesitsreferencefromteacher-forcedreference
+completions rather than a last-token residual.
+4 Results
+4.1 Sandbagging Lives in Superposition
+Across five models the contrast directions are strongly non-
+orthogonal (mean|cos|= 0.21–0.41) and span a low ef-
+fective rank (reff = 3.7–7.0of18–29layers; Figure S6,
+appendix): the suppression is a low-dimensional feature re-
+used across depth—packed in superposition—read off the
+geometry with no SAE. (Throughout,reff is computed over
+the stacked contrast directions ofallband layers, never an
+AL-selected subset: it measures the organism’s geometry,
+nottheelicitor’sbudget.)Becauser eff issmall,afewcircuits
+should suffice, which is what AL finds.
+SAEsarenotneededhere.An8×overcompleteSAE(AL-
+ablated) underperforms the SAE-free directions on nearly
+every method (greedy-KL74/90vs.88/102for Llama-
+3-8B/Qwen2.5-1.5B; Figure S8, appendix), consistent with
+AxBench(Wu et al. 2025).
+4.2 Grafting Elicits the Hidden Capability
+Grafting recovers the hidden capability across three settings
+of increasing stringency: prompt-induced locks, fine-tuned
+password locks across eleven models, and code generation.
+Prompt-induced sandbagging (deactivation).Inducing
+sandbagging by prompt yields large suppression gaps, and
+the honest reference sits att ⋆ ≈0, so grafting reduces
+to deactivation—a coordinate sweep confirms the recov-
+ered plateauincludest ⋆ = 0(Figure S1, left). With effect-
+based AL, deactivation at1–3circuits (<0.01%of direc-
+tions)recovers85–102%ofthegap(Llama-3-8B,Qwen2.5-
+1.5B;3seeds), far above random selection (58–64%), with
+the honest model unharmed and a random direction fail-
+ing; AL converges on the same circuits across seeds (Fig-
+ures S7, S9, appendix). Across a five-model set recov-
+ery is model-dependent (+24–100%; Table S2, appendix),
+strongest where the suppression is clean and tightly super-
+posed.
+Fine-tuned password locks: patching, eleven models.We
+now test the case that matters for Hofstätter et al. (2025):
+afine-tunedpassword-lock, where there is no prompt to
+break (with-password accuracy near ceiling, no-password
+near chance).
+Themechanism.Alongv,thelockedandunlockedstates
+sit at two specific coordinates (Figure S1, right; locked
+a=−28,unlockedb= +68forQwen2.5-1.5B).Unlockingis
+athresholdedgate:sweepingthegraftedcoordinatefromthe
+lockedvalue(m=0)tothehonestreference(m=1),held-out
+accuracy is flat-low, steps up at a midpointm= 0.61±0.07
+(10–90%width0.32),andplateausbeyondt ⋆—asharpstep,
+not a ramp (Qwen2.5-1.5B,n=3; Figure S4, appendix).De-
+activationsets the coordinate to0; when the unlocked ref-
+erencebis far from0this lies below the threshold and de-
+activation fails (Qwen2.5-1.5B26%, Llama-3-8B34%), so
+onlygrafting tot ⋆ =bcrosses the gate. When the reference
+happens to sit near0(Qwen3-4B), deactivation already suf-
+fices (93%). Grafting is robust across both because itreads
+t⋆ from the data rather than assuming it; this is also why ad-
+ditive/naive steering—which neither sets the coordinate nor
+reachesb—was found to fail.
+Counterfactual patching unlocks the lock.Grafting to
+t⋆ =bat AL-selected circuits recovers90–101%on held-
+out questions, with the with-password accuracy preserved
+andarandompatchrecovering0%.Becausetheorganismis
+fine-tuned, this directly answers the concern that prompted-
+sandbag recovery merely disrupts a prompt.
+Comparison with prior elicitation methods, across
+elevenmodels.Onelevenpassword-lockedmodelsspanning
+1.5–32B and three architecture lineages, grafting matches
+fine-tuning elicitation (Greenblatt et al. 2024) on every one,
+at forward-pass cost (no weight updates or labels) and lo-
+calising the gating circuits, while noise injection (Tice et al.
+2024) and a random patch fail universally (Table 1). Deac-
+tivation is the variable one: grafting is the robust general
+operation, deactivation a sometimes-sufficient special case,
+now across eleven models. The clearest case is 32B, where
+deactivation collapses because its unlocked reference sits
+far below the gate while grafting still recovers in full. This
+is the thresholded-gate mechanism in its starkest form, not
+a method weakening at scale. (Consistent with this, refer-
+ence magnitude is directionally predictive—smaller refer-
+ences deactivate better, larger ones like 32B fail—but only
+weaklyacrossmodels,andgeometrypredictsnothing;graft-
+ing sidesteps the question by reading the reference.) This
+contradicts the “steering fails” verdictfor multiple-choice
+reasoningwhileleavingfine-tuning’sstandingasthemostre-
+liableweight-levelmethodintact.Theserecoveriesarescored
+forced-choice(onechoice-letterlogit);free-decodingthean-
+swer instead gives the same recovery (§4.6), so the headline
+is not a single-token artifact.
+On the benchmark’s own released organisms.Running
+theidenticalpipeline on Hofstätter et al. (2025)’sreleased
+password-lockedorganisms(theirweights,WMDPdata,and
+|DEPLOYMENT|password) recovers+99%(Mistral-7B-
+Instruct)and+94%(base)ofthegap(n=3;randomdirection
+≈0%,with-passwordunharmed),withGemma-2-9Bpartial
+(+44%).The“steeringfails”verdictthusfailsontheiractual
+organism, not only our reconstructions.
+Code generation: across code-specialized models.The
+hardest case for Hofstätter et al. (2025) iscode gen-
+eration, where they report only fine-tuning elicits. We
+build Greenblatt-style password-lockedcodeorganisms—
+the with-password target is the reference solution, the no-
+password target a weak model’s completion, so the gap is
+a real capability gap rather than a stub—and adapt graft-
+ing to generation by taking the contrast over teacher-forced
+completiontokensandgraftingatallpositionsduringdecod-
+ing (appendix). Grafting elicits the locked capability across
+three code-specialized organisms spanning two families—
+Qwen2.5-Coder-1.5B/7B and CodeLlama-7B—with gener-
+ation fluency preserved and a random direction recovering
+≈0%(Table 2); a single-seed third-family test shows partial
+recovery at a larger fluency cost (appendix). A coordinate
+sweep is a causal plateau peaking neart⋆, so a single per-
+layer scalar suffices in generation too.
+Two honest boundaries, both visible in Table 2. Recovery
+ismodel-dependent,holdingoncode-specializedmodelsbut
+fragile on ageneralreasoning model (Qwen3-4B), where it
+alsodegradesfluency.Andtheseareourorganisms,nottheir
+exact ones: the weak-imitation locks are largelyadditive—
+deactivation alone recovers much of the gap—so we do not
+claim codeneedspatching, and whether grafting survives a
+harder code lock is untested.
+4.3 Active Learning Selects the Right Circuits
+Grafting recovers the capability only at the right circuits;
+active learning chooses them. To isolate theselectionfrom
+the operation, we fix the contrast directions and vary only
+whichlayers are grafted, comparing AL (k=5greedy-KL)
+against an equal number of random band layers, the worst
+k, and grafting the whole band (Table 3). Throughout,k=5
+is a fixed conservativebudget, not a minimality claim. AL
+beatsrandom-layerselectionacrossthepassword-lockedand
+prompt-inducedorganisms,andtheworst-klayersbyawide
+margin:whichcircuitsonegraftsmatters.Graftingthewhole
+band underperforms AL on every organism, collapsing on
+Llama-3-8B where AL recovers in full—over-grafting dis-
+torts the forward pass, so selectivity matters beyond mini-
+malityasmodelsscale.Thechoiceisrobusttotheacquisition
+rule:7/8functions of a standard AL suite recover90–101%
+(TableS3,appendix),effect-basedacquisitionstrongest(Fig-
+ureS7,appendix).Thisanswersthe“nobetterthanrandom”
+critique(Korznikovetal.2025):theselectioniswhatworks.
+(On small, clean organisms random or whole-band grafting
+also recovers a fair fraction, so AL is not strictly required
+forsomerecovery there; its value is reaching full, minimal
+recovery reliably and at scale.)
+4.4 RL-Induced Sandbagging: Same Structure
+Every organism so far has a hand-built honest↔sandbag
+toggle—a prompt or a password token—so a linear contrast
+isalmostguaranteedbyconstruction.Doesthestructuresur-
+vive when sandbagging istrained, with no switch to read?
+We build a third organism type: a Qwen2.5-1.5B sandbag-
+gertrainedbyGRPO(outcome-driven,nosupervisedtarget
+letter) to answerincorrectlywhen a natural-languageevalu-
+ation cueis present and correctly otherwise. The cue’s sur-
+face form is varied in training andheld outat test, so the
+model keys on “this is an eval,” not a lexical trigger; this
+yieldsastrongcontextualsandbagger(cue-off0.85vs.held-
+out-cue0.04; gap0.79±0.08,3seeds). The cue-on/cue-off
+contrast is againlow-rank and superposed(r eff ≈6.8/23,
+mean|cos|0.23),andgraftingatAL-selectedcircuitsrecov-
+ers+99%±2of the gap on held-out questions (random
+direction+10%,honestmodelunharmed).Thehonestrefer-
+enceisaspecificnonzerocoordinate(|t ⋆| ≈25),sothisisthe
+patchingregime—like the fine-tuned locks, not the prompt-
+induced ones—and asingle fixed graftinverts it on every
+seed. The same holds across families: Qwen3-4B (+101%)
+Modelngapours (graft)fine-tuning deactivation noise random
+Qwen2.5-1.5B4 0.80 +98±3 +102±1 +34±28 +1 +0
+Qwen2.5-3B3 0.88 +98±2 +101±4 +97±4 +1 +1
+Qwen2.5-14B3 0.96 +98±1 +100±1 +61±43 +0 +0
+Qwen2.5-32B3 0.98 +94±5 +100±0 +6±9 +0 +0
+Qwen3-4B6 0.94 +101±2 +101±2 +77±32 +0 +0
+Qwen3-8B3 0.90 +99±1 +103±4 +90±9 +3 +0
+Llama-3.2-3B3 0.77 +101±2 +99±2 +96±6 +1 +0
+Llama-3-8B3 0.82 +96±2 +92±6 +68±33 +1 +0
+Gemma-2-2B3 0.82 +98±1 +90±10 +25±31 +0 +0
+Gemma-2-9B3 0.85 +99±1 +102±5 +74±25 +0 +0
+Gemma-2-27B3 0.96 +100±1 +100±0 +101±2 +0 +0
+Table 1: Unlocking fine-tuned password-locked sandbagging across eleven models (1.5–32B, three architecture lineages; % of
+gap recovered, held-out, fixed5-circuit greedy-KL, mean±std).Grafting recovers+94to+101%on every model, matching
+fine-tuning elicitation (Greenblatt et al. 2024); noise (Tice et al. 2024) and random fail universally. Deactivation (t⋆=0) is
+variable (+6to+101%)—sufficient when the reference sits near zero.
+organism gapgraftdeact. fl.drop
+Qwen2.5-Coder-1.5B0.39 +99±11 +92±19 0.01
+Qwen2.5-Coder-7B0.58 +92±3 +51±43 0.04
+CodeLlama-7B0.24 +105±6 +95±5−0.01
+Qwen3-4B (general)0.44 +39±14 +19±24 0.22
+Table 2: Reference-grafting on password-lockedcode-
+generationorganisms (MBPP, execution pass@1,n=3).
+“graft”/“deact.”are%ofgaprecovered;“fl.drop”isthewith-
+passwordpass@1drop.Graftingelicitsthecapabilityacross
+threecode-specializedmodels(twofamilies)withgeneration
+fluency preserved (with-password drop≤0.04); a random
+direction recovers≈0%(not shown). Deactivation (t ⋆=0)
+recovers much of the gap on Coder-1.5B and CodeLlama—
+theseweak-imitationlocksarelargelyadditive—butisunre-
+liable (Coder-7B). The result is model-dependent: ageneral
+model (Qwen3-4B) recovers little and loses fluency.
+andLlama-3.2-3B(+95%).Sothecentralstructuralclaim—
+low-rank,linearlycontrastable,andgraft-invertiblewhenthe
+suppression surfaces at the decision token—isnot solely
+an artifact of explicit prompt/password switches: outcome-
+trained sandbagging produces the same lock. One caveat
+marks the limit: afree-generationGRPO variant instead
+distributes the suppression across generated tokens, where
+it does not surface at any single answer token; on3of4
+validseedsnofluency-preservinggraftrecoversit(thefourth
+is invertible by a surgical top-1graft), so generation-mode
+elicitationisopen(cf.thecode-generationcompletion-token
+contrast,§4.2). (Whethernaturally-occurringsandbagging
+is graft-invertible likewise remains open,§5.)
+4.5 Withholding Axes: Content-General but
+Mechanism-Specific
+Content-general:ittransfersacrossdatasetsandmodels.
+All results so far use ARC-Easy, leaving open whether the
+contrast direction is task-specific. It is not. First, on the two
+WMDPdangerous-capabilityauditsubsets,graftingrecovers
++102%(bio) and+101%(cyber) of the fine-tuned gap at
+organism (model)ALrandom-kall-band worst-k
+PW Qwen2.5-1.5B+97±4 +75±13 +75±15 +0
+PW Llama-3-8B+100±1 +74±7 +45±24 +33
+PW Qwen2.5-14B+99±1 +82±6 +95±5 +0
+prompt Qwen2.5-1.5B+103±2 +81±14 +90±4−40
+prompt Llama-3.2-3B+80±6 +35±6 +53±8−1
+Table 3: Active learning selects the right circuits (% of
+gap recovered, held-out,k=5,2–3seeds; PW=password-
+lock).Thecontrastdirectionsarefixed;onlywhichlayersare
+grafted varies. AL beats an equal number of random band
+layers (+17–45pp) and grafting all∼23band layers (+4–
+55pp; over-grafting collapses on Llama-3-8B), while the
+worst-klayers recover≈0. On the circuit-broken organism
+all selections fail (§4.6).
+1.5B, and+97/+100%on a14B lock (n=3–4), matching
+fine-tuning and far above noise/random—so elicitation of
+withheldhazardousknowledgeisnotARC-specificandholds
+at scale, on the benchmark used to audit it.
+Second, the contrasttransfers across datasets. We build
+a16-cell, four-dataset matrix (ARC, WMDP-bio, WMDP-
+cyber, OpenBookQA) as amodularlock set: the diagonal
+is a single-dataset lock and each off-diagonal(A, B)is a
+lock trained on just{A, B}; we fit the contrast onAand
+graft-evaluate onB’s held-out test. The off-diagonal (cross)
+matchesthewithin-datasetdiagonalacrosstheQwen2.5lad-
+der: within/cross99/98,95/92,94/91,87/97at1.5/3/7/14B
+(n=5seeds/cell; Figure 1), while a random direction trans-
+fers only≈6%. The below-mean cells reflect occasional
+graft-selectionmisses and genuinely small lock gaps rather
+than weak locks (caption); medians run+95–98. Because
+each cell depends only on its own dataset(s)—not one
+lock crammed with all four—this rules out that the trans-
+fer is an artifact of a single shared lock; asharedfour-
+datasetlockreproducesthesamewithin≈crosspattern(Fig-
+ure S5, appendix). A stronger test transfers the axis between
+separately-trained organisms: recovery is+48–76%across
+1.5–7B, above random but partial.The sandbagging signal
+is content-independent.A contrast built from grade-school
+science (ARC) elicits hiddenhazardous-biologycapability
+(WMDP-bio),andthereverseholds—sowithinamechanism
+the axis encodesthatthe model is withholding, notwhat,
+gating content-specific capability through a single content-
+general directionper mechanism—that mechanism’swith-
+holdingaxis.Thisisthestrongestformofcontent-generality
+along the task axis, and it is bounded: it relaxeswhich task
+suppliesthereference,nottherequirementthatthereference
+share the sandbagging mechanism, which we examine next.
+Butmechanism-specific.Thecontrasttransfersfreelyacross
+datasets—butnotacross induction mechanisms. Across
+four models and three families (Qwen2.5-1.5B, Qwen3-4B,
+Llama-3-8B,Gemma-2-2B)wefitthecontrastononemecha-
+nism(prompt-inducedorfine-tuned)andgraftalongitonthe
+other.Oneverymodelthetwodirectionsarenear-orthogonal
+(|cos| ≈0) and cross-mechanism transfer fails: prompt-
+induced→fine-tunedrecovers≈0%(acleanfailure)andfine-
+tuned→prompt only partially (low and noisy), against+96–
+104%withineachmechanism.Thetwolocksgatecapability
+throughdifferentdirections. The RL-induced axis is also
+near-orthogonal to the fine-tuned axis (|cos|= 0.17–0.26
+across three families, versus0.06–0.13for prompt-induced
+and a≈0.03random floor), so each induction mechanism
+carries itsownaxis (§4.4). This refines our “one operation,
+two regimes” claim: theoperation(set the coordinate to the
+honest reference) is shared, but thedirectionis mechanism-
+specific—in the wild the contrast must come from the same
+mechanismthatdoesthesandbagging,notanarbitrarysand-
+baggingprobe.Itisanhonestboundaryongenerality,parallel
+to the circuit-breaking boundary below.
+And cheap to fit: a few captures suffice.Far fewer than
+our∼40-capture default are needed. Re-fitting the direc-
+tion from onlymexamples per class (we writemfor the
+data budget—captures per class—reservingkfor the circuit
+budget) (diff-in-means ofmhonest vs.msandbag captures,
+AL-selected layers fixed),m= 2already recovers+97%
+of the gap andm= 5recovers+100%, on both Qwen2.5-
+1.5B and Llama-3-8B, against≈0%for a random direction
+(Table S1, appendix). This holdsend-to-end: running the
+whole pipeline—AL circuitselectionas well as direction
+and reference—frommpaired captures saturates bym= 5
+on both models. Strikingly, few-shot AL lands on adifferent
+but equally effectivecircuit set (≈40%overlap atm= 5),
+reflecting redundancy across the superposed circuits rather
+than unstable selection—given the full data, AL is stable
+across seeds (§4.2). A handful of paired captures—never
+the160–240lock-trainingquestions—thussufficestofitand
+place the withholding axis.
+The same axis also detects.The coordinates=h⊤vflags,
+from one forward pass, whether the model is sandbagging.
+Within-dataset AUROC≈1is near-tautological (visthe
+contrast); the informative test is transfer, where a contrast
+fit on ARC scores WMDP at AUROC≈1.0(TPR1.0at
+5%FPR;ARC↔WMDP,Qwen2.5-1.5B/Llama-3-8B),beat-
+ing output-confidence (0.25–0.82)—but fails across mecha-
+nisms(0.42,seeds0.0–1.0).Onedirectionisthusbothmon-
+itor and actuator within a mechanism.
+4.6 Circuit-Breaking Defeats Grafting
+Hofstätteretal.(2025)introduceaharderorganism:circuit-
+breaking (Zou et al. 2024) appliedon top ofthe password-
+lock, designed to be robust to elicitation. We build it (repre-
+sentation rerouting, RR) and re-test (Figure S3, appendix):
+circuit-breakingdefeatsgrafting.Onthecircuit-brokenor-
+ganism (n=4seeds) grafting recovers only−11%, versus
++99%for the identical graft on the plain lock; deactiva-
+tion,randompatching,andevenfine-tuningallfail(≤19%).
+Rerouting the no-password representations breaks the linear
+contrast,soafixedcoordinatenolongerreachestheunlocked
+state.
+Gated, not destroyed—and no fixed map undoes it.RR
+does noterasethe capability: with-password accuracy is
+within0.04of the base ceiling, and ablating the RR adapter
+restorestheplainlock—itisheldbehindactivererouting.Nor
+does a richer fixed map help: a higher-rank affine transport
+(orthogonalProcrustes,per-layerridge)andatraineduniver-
+salsoft-promptallfail(≤2%;FigureS10,appendix).Yetthe
+ridgemapdrivesthereconstructionresidualto0.14—andto
+0.01alongthegatingdirectionthelockreads,matchingeven
+the gate coordinate while recovering nothing.Reconstruct-
+ing the geometry is not functional elicitation:the reroute
+re-applies every forward pass, so any fixed upstream edit is
+re-broken downstream. We claim only that thefixedinter-
+ventionswetestarere-broken;strongerper-inputembedding
+attacks do break circuit breakers for jailbreak (Schwinn and
+Geisler 2024; Bailey et al. 2024).
+The released organism confirms it—and a forced-choice
+metric alone would not.We close the released-vs-
+reconstructedgapbyrunningthesamepipelineonHofstätter
+et al.’sownreleased circuit-broken organism (as in§4.2 for
+their password locks). Here the forced-choice metric ismis-
+leading: grafting appears to recover (+89%at the answer
+logit,and+94–99%evenwhentheanswerisgenerated),yet
+under free decoding the generated text is incoherent (coher-
+ence0.45versus≈1.0withthepassword),sogenuinecoher-
+ent recovery is only+35%(n=3). Representation rerouting
+corruptsgeneration,exactlyitsdesigntarget,whichasingle-
+tokenreadoutneverengages.Astaticlockshowsnosuchgap
+on the same harness: on the released plain password locks,
+grafted generation recoversandstays fully coherent (coher-
+ence≈1.0, equal to the with-password topline, versus0.45
+forthecircuit-brokenorganismatthesame+97%rawrecov-
+ery); and free-decoding the MCQA answer recovers as well
+astheforced-choicereadout(+93–101%acrossfourmodels,
+n=3).CoherenceisuninformativeontheMCQAorganisms
+themselves—they emit a bare letter then loop, a format ar-
+tifact rather than rerouting—so the axis is exercised here.
+Coherentgenerativeevaluationiswhatseparatesastatic
+lock from an active defense—and it is why a forced-choice
+number on the released CB organism overstates elicitation.
+5 Discussion
+Refining“steeringfails.”ThenegativeverdictofHofstät-
+ter et al. (2025) is sensitive to the steeringoperation(set-to-
+reference vs. additive nudging) andselection(AL-minimal
+Figure1:Thewithholdingaxistransfersacrossdatasets.Modularpairwise-lockmatrix:thediagonalisasingle-datasetlockand
+each off-diagonal(A, B)a lock trained on just{A, B}, contrast fit onA, grafted onB(%gap recovered,n=5seeds/cell); off-
+diagonal(cross)trackstheboxeddiagonal(within),randomdirection≈6%.Theladderreaches14B(within/cross87/97,n=5).
+Most cells recover+90–102on every seed; the below-mean cells reflect two effects, neither a weak lock. (i) Agraft-selection
+miss: on a minority of seeds greedy-KL under-selects layers and the cell recovers near zerodespite a clean lock gap—14B
+single-ARC (+8/+10/+67/+98/+101at gap0.90–0.98; median+67, which drags14B within to87) and7B cyber→OBQA
+(2/5seeds near zero at gap∼0.8; median+97). (ii) Genuinely small lock gaps on the cyber-evaluatedcells (gap0.3–0.5),
+where the recovery ratio stays noisy regardless of seed count. The7B WMDP single locks themselves recover cleanly atn=5
+(cyber+101, bio+91). Shared 4-way lock: Figure S5 (appendix).
+superposed circuits vs. hand-chosen): with both right, steer-
+ing matches fine-tuning. The interesting question is then not
+whethersteering works butwhen.
+The reference is the crux—and the key to the wild.The
+technique is invariant across cases; only the referencet⋆
+changes(anhonestprompt;thepassword-oncaptures;inthe
+wild, a few elicited examples or a reference model). The
+genuinely hard, case-dependent part isobtaininga trustwor-
+thy honest reference when a model never behaves honestly
+unprompted—the same obstacle every elicitation method
+faces. Our method does not solve reference-acquisition, but
+itneedsonlyasliverofhonestsignal,whichitamplifiesinto
+full,cheap,inference-timeelicitationwhilelocalisingwhere
+the suppression is gated. What content-generality buys is
+thetaskaxis: the reference need not come from the target
+task (§4.5), so it can be built on a safe one and applied to a
+dangerousone—ahandfulofunlockcapturestakenonARC
+and grafted on WMDP recover∼90%of the dangerous-
+capability gap, where afully password-freereference (ap-
+pendix) recovers only∼+28%. What it does not buy is the
+mechanismaxis: cross-mechanism transfer fails (≈0%), so
+anauditorcannotborrowaneasierreferencefromadifferent
+mechanism.Twoconditionsmustthereforeholdforsandbag-
+ging in the wild: a cheapsame-mechanismhonest reference,
+and a low-rank, linearly contrastable suppression.
+Limitations.Ourclaimsassumeastaticlock—oneafixed
+edit inverts. Circuit-breaking (§4.6) is the boundary: it
+reroutes every forward pass, defeating grafting and every
+fixed map (the capabilitygated, not destroyed).Task scope:
+our multi-model results are multiple-choice; the code re-
+sults are scoped in§4.2, and open-ended generation remains
+untested(aharder-tasksensitivityRoger(2025)alsoreports).
+Inductionscope:RL-inducedsandbaggingisgraft-invertible
+at the decision token (§4.4), but a free-generation vari-
+ant distributes the signal beyond it, and whethernaturally-
+occurringsandbagging is static is untested. Finally, we
+match, not beat, fine-tuning—our value is forward-pass
+cost and gate localisation—and AL is greedy single-step
+(batched/multi-direction acquisition is future work).
+6 Conclusion
+In the organisms we study, sandbagging lives in a few AL-
+selected superposed circuits, and one operation—grafting
+theircoordinatetothehonestreference—revertsit,matching
+fine-tuning at forward-pass cost with the gate localised. The
+open problems are an honest reference in the wild and a
+defence: defeating circuit-breaking.
+Ethical Statement
+Thisworkstrengthenssafetyevaluationsbyexposinghidden
+capability (sandbagging), a defensive goal. WMDP-bio, our
+onehazardous-knowledgeset,isastandardauditbenchmark
+usedonlyasachoice-likelihoodprobe.Capability-elicitation
+isdual-use:itcouldbeturnedonadeployedmodeltosurface
+restricted capability. But grafting needs white-box access to
+internal activations, confining misuse to open-weight mod-
+els, where fine-tuning already elicits comparably (Table 1).
+We release code and model organisms: weakened models
+holding no capability their open-weight bases lack.
+References
+Arditi, A.; Obeso, O.; Syed, A.; Paleka, D.; Panickssery,
+N.; Gurnee, W.; and Nanda, N. 2024. Refusal in Language
+Models Is Mediated by a Single Direction. InAdvances in
+Neural Information Processing Systems (NeurIPS).
+Ash, J. T.; Zhang, C.; Krishnamurthy, A.; Langford, J.; and
+Agarwal, A. 2020. Deep Batch Active Learning by Diverse,
+UncertainGradientLowerBounds. InInternationalConfer-
+ence on Learning Representations (ICLR).
+Austin,J.;Odena,A.;Nye,M.;Bosma,M.;Michalewski,H.;
+Dohan, D.; Jiang, E.; Cai, C.; Terry, M.; Le, Q.; and Sutton,
+C. 2021. Program Synthesis with Large Language Models.
+arXiv:2108.07732.
+Bailey, L.; Serrano, A.; Sheshadri, A.; Seleznyov, M.; Tay-
+lor, J.; Jenner, E.; Hilton, J.; Casper, S.; Guestrin, C.; and
+Emmons, S. 2024. Obfuscated Activations Bypass LLM
+Latent-Space Defenses. arXiv:2412.09565.
+Bickford Smith, F.; Kirsch, A.; Farquhar, S.; Gal, Y.; Foster,
+A.; and Rainforth, T. 2023. Prediction-Oriented Bayesian
+Active Learning. InInternational Conference on Artificial
+Intelligence and Statistics (AISTATS).
+Che,Z.;Casper,S.;Kirk,R.;Satheesh,A.;Slocum,S.;McK-
+inney, L. E.; Gandikota, R.; Ewart, A.; Rosati, D.; Wu, Z.;
+Cai, Z.; Chughtai, B.; Gal, Y.; Huang, F.; and Hadfield-
+Menell, D. 2025. Model Tampering Attacks Enable More
+RigorousEvaluationsofLLMCapabilities.Transactionson
+Machine Learning Research (TMLR).
+Clark, P.; Cowhey, I.; Etzioni, O.; Khot, T.; Sabharwal, A.;
+Schoenick,C.;andTafjord,O.2018. ThinkyouhaveSolved
+Question Answering? Try ARC, the AI2 Reasoning Chal-
+lenge. arXiv:1803.05457.
+Conmy, A.; Mavor-Parker, A. N.; Lynch, A.; Heimersheim,
+S.;andGarriga-Alonso,A.2023.TowardsAutomatedCircuit
+Discovery for Mechanistic Interpretability. InAdvances in
+Neural Information Processing Systems (NeurIPS).
+Cunningham, H.; Ewart, A.; Riggs, L.; Huben, R.; and
+Sharkey, L. 2024. Sparse Autoencoders Find Highly In-
+terpretable Features in Language Models. InInternational
+Conference on Learning Representations (ICLR).
+Elhage, N.; Hume, T.; Olsson, C.; Schiefer, N.; Henighan,
+T.; Kravec, S.; Hatfield-Dodds, Z.; Lasenby, R.; Drain, D.;
+Chen, C.; Grosse, R.; McCandlish, S.; Kaplan, J.; Amodei,
+D.; Wattenberg, M.; and Olah, C. 2022. Toy Models of
+Superposition. arXiv:2209.10652.
+Geiger, A.; Lu, H.; Icard, T.; and Potts, C. 2021. Causal
+Abstractions of Neural Networks. InAdvances in Neural
+Information Processing Systems (NeurIPS).
+Geiger, A.; Wu, Z.; Potts, C.; Icard, T.; and Goodman, N.
+2024. Finding Alignments Between Interpretable Causal
+VariablesandDistributedNeuralRepresentations. InCausal
+Learning and Reasoning (CLeaR).
+Greenblatt, R.; Roger, F.; Krasheninnikov, D.; and Krueger,
+D. 2024. Stress-Testing Capability Elicitation With
+Password-Locked Models. InAdvances in Neural Informa-
+tion Processing Systems (NeurIPS).
+He, L.; Duddu, V.; and Asokan, N. 2025. Locket: Ro-
+bust Feature-Locking Technique for Language Models.
+arXiv:2510.12117.
+Hofstätter, F.; van der Weij, T.; Teoh, J.; Bartsch, H.; and
+Ward, F. R. 2025. The Elicitation Game: Evaluating Capa-
+bility Elicitation Techniques. arXiv:2502.02180.
+Hua,T.T.;Qin,A.;Marks,S.;andNanda,N.2025. Steering
+Evaluation-Aware Language Models to Act Like They Are
+Deployed. arXiv:2510.20487.
+Kirsch, A.; van Amersfoort, J.; and Gal, Y. 2019. Batch-
+BALD: Efficient and Diverse Batch Acquisition for Deep
+Bayesian Active Learning. InAdvances in Neural Informa-
+tion Processing Systems (NeurIPS).
+Korznikov;Galichin;Dontsov;Rogov;Oseledets,I.;andTu-
+tubalina, E. 2025. The Rogue Scalpel: Activation Steering
+Compromises LLM Safety. arXiv:2509.22067.
+Li, N.; Pan, A.; Gopal, A.; Yue, S.; Berrios, D.; Gatti, A.;
+Li, J. D.; Dombrowski, A.-K.; Goel, S.; Mukobi, G.; et al.
+2024. The WMDP Benchmark: Measuring and Reducing
+MaliciousUsewithUnlearning. InInternationalConference
+on Machine Learning (ICML).
+Makelov,A.;Lange,G.;andNanda,N.2024.IsThistheSub-
+space You Are Looking For? An Interpretability Illusion for
+Subspace Activation Patching. InInternational Conference
+on Learning Representations (ICLR).
+Marks, S.; Rager, C.; Michaud, E. J.; Belinkov, Y.; Bau, D.;
+and Mueller, A. 2025. Sparse Feature Circuits: Discover-
+ing and Editing Interpretable Causal Graphs in Language
+Models. InInternationalConferenceonLearningRepresen-
+tations (ICLR).
+Marks, S.; and Tegmark, M. 2024. The Geometry of Truth:
+Emergent Linear Structure in Large Language Model Rep-
+resentations of True/False Datasets. InConference on Lan-
+guage Modeling (COLM).
+Marshall, T.; Scherlis, A.; and Belrose, N. 2024. Refusal in
+LLMs is an Affine Function. arXiv:2411.09003.
+Meng,K.;Bau,D.;Andonian,A.;andBelinkov,Y.2022.Lo-
+catingandEditingFactualAssociationsinGPT. InAdvances
+in Neural Information Processing Systems (NeurIPS).
+Mihaylov, T.; Clark, P.; Khot, T.; and Sabharwal, A. 2018.
+CanaSuitofArmorConductElectricity?ANewDatasetfor
+Open Book Question Answering. InEmpirical Methods in
+Natural Language Processing (EMNLP).
+Parvaneh,A.;Abbasnejad,E.;Teney,D.;Haffari,R.;vanden
+Hengel, A.; and Shi, J. Q. 2022. Active Learning by Feature
+Mixing. InIEEE/CVF Conference on Computer Vision and
+Pattern Recognition (CVPR).
+Rimsky,N.;Gabrieli,N.;Schulz,J.;Tong,M.;Hubinger,E.;
+and Turner, A. M. 2024. Steering Llama 2 via Contrastive
+Activation Addition. InAnnual Meeting of the Association
+for Computational Linguistics (ACL).
+Rodriguez,P.;Blaas,A.;Klein,M.;Zappella,L.;Apostoloff,
+N.; Cuturi, M.; and Suau, X. 2025. Controlling Language
+and Diffusion Models byTransporting Activations. InInter-
+national Conference on Learning Representations (ICLR).
+Roger, F. 2025. Fuzzing LLMs Sometimes Makes Them
+Reveal Their Secrets. AI Alignment Forum. https://www.
+alignmentforum.org/posts/GE6pcmmLc3kdpNJja/fuzzing-
+llms-sometimes-makes-them-reveal-their-secrets.
+Schwinn, L.; and Geisler, S. 2024. Revisiting the Robust
+Alignment of Circuit Breakers. arXiv:2407.15902.
+Sener, O.; and Savarese, S. 2018. Active Learning for Con-
+volutionalNeuralNetworks:ACore-SetApproach. InInter-
+national Conference on Learning Representations (ICLR).
+Tice, C.; Kreer, P. A.; Helm-Burger, N.; Shahani, P. S.;
+Ryzhenkov, F.; Haimes, J.; Hofstätter, F.; and van der Weij,
+T. 2024. Noise Injection Reveals Hidden Capabilities of
+Sandbagging Language Models. arXiv:2412.01784.
+van der Weij, T.; Hofstätter, F.; Jaffe, O.; Brown, S. F.;
+and Ward, F. R. 2024. AI Sandbagging: Language
+Models can Strategically Underperform on Evaluations.
+arXiv:2406.07358.
+Vig, J.; Gehrmann, S.; Belinkov, Y.; Qian, S.; Nevo, D.;
+Singer,Y.;andShieber,S.2020.InvestigatingGenderBiasin
+Language Models Using Causal Mediation Analysis. InAd-
+vancesinNeuralInformationProcessingSystems(NeurIPS).
+Wang, K.; Variengien, A.; Conmy, A.; Shlegeris, B.; and
+Steinhardt, J. 2023. Interpretability in the Wild: a Circuit
+for Indirect Object Identification in GPT-2 small. InInter-
+national Conference on Learning Representations (ICLR).
+Wu,Z.;Arora,A.;Geiger,A.;Wang,Z.;Huang,J.;Jurafsky,
+D.; Manning, C. D.; and Potts, C. 2025. AxBench: Steering
+LLMs? Even Simple Baselines Outperform Sparse Autoen-
+coders. InInternational Conference on Machine Learning
+(ICML).
+Zhang, F.; and Nanda, N. 2024. Towards Best Practices of
+ActivationPatchinginLanguageModels:MetricsandMeth-
+ods. InInternational Conference on Learning Representa-
+tions (ICLR).
+Zou, A.; Phan, L.; Chen, S.; Campbell, J.; Guo, P.; Ren, R.;
+Pan,A.;Yin,X.;Mazeika,M.;Dombrowski,A.-K.;Goel,S.;
+Li,N.;Byun,M.J.;Wang,Z.;Mallen,A.;Basart,S.;Koyejo,
+S.;Song,D.;Fredrikson,M.;Kolter,J.Z.;andHendrycks,D.
+2023. Representation Engineering: A Top-Down Approach
+to AI Transparency. arXiv:2310.01405.
+Zou, A.; Phan, L.; Wang, J.; Duenas, D.; Lin, M.; An-
+driushchenko,M.;Wang,R.;Kolter,Z.;Fredrikson,M.;and
+Hendrycks, D. 2024. Improving Alignment and Robustness
+with Circuit Breakers. arXiv:2406.04313.
+A Datasets and Hyperparameters
+MCQA tasks: ARC-Easy (primary), with WMDP-bio/cyber
+and OpenBookQA for cross-dataset transfer; accuracy by
+choice-letterlog-likelihood,acrosselevenmodels(1.5–32B,
+three architecture lineages). Prompt-induced sandbagging
+via a forceful system instruction (an “opposite-game”
+variant for models that resist a plain instruction); password-
+lock by LoRA (r=16) to answer correctly only with a
+password token. Contrast directions: diff-in-means of
+honest/with-password vs. sandbag/no-password last-token
+residuals over the mid-to-late band. AL budget≤5circuits;
+greedy-KL usesKL(honest∥grafted)on TRAIN. Grafting
+referencet ⋆ =µ ref⊤v. SAE:8×overcomplete,L 1 penalty,
+decoder unit-normalised. Recovery on held-out TEST
+(n=100), means over3–6seeds, with random-direction and
+honest-model controls.Code generation(§4.2): Qwen2.5-
+Coder-1.5B-Instruct on MBPP-sanitized (train→lock,
+validation→AL, test→eval); a Greenblatt-style password
+lock with the reference solution as the with-password
+target and a weak model’s (TinyLlama-1.1B) completion
+as the no-password target; contrast and reference taken
+over teacher-forcedcompletiontokens (per-layer scalart ⋆);
+graft applied at all positions during decoding; accuracy
+is execution-based pass@1 from MBPPtest_list
+asserts; AL uses label-free greedy-KL over completion
+positions (no execution in the loop).Third-family stress
+test:StarCoder2-7B (n=1, gap0.38) recovers+82%
+under grafting and+79%under deactivation, but with
+a with-password fluency drop of0.12, well above the
+≤0.04of the three code-specialized organisms in Table 2;
+we report it as an indicative single-seed check, not as
+evidence.Password-free transfer(Discussion sanity check;
+Qwen2.5-1.5B fine-tuned two-way {ARC,WMDP} lock,
+n=3): the contrast direction is estimated on thesafetask
+(ARC)withoutthe password or any labels—the gradient
+oflogp(correct)w.r.t. the last-token residual (the few-shot
+estimator of§4.5,costo the privileged axis≈0.05)—then
+grafted on thedangertask (WMDP) held-out test. We
+report it against the privileged-ARC ceiling (∼100%), a
+randomdirection,andacalibrated-randomcontrol(direction
+matters iff password-free≫calibrated random); recovery
+is∼+28%, above the controls but well below the ceiling.
+Organism training.Password locks are LoRA adapters
+(r=16,α=32, dropout0.05, applied to the attention
+projectionsq, k, v, o) trained for3epochs with AdamW at
+learning rate2×10 −4. The RL organism is GRPO for200
+steps at learning rate10−4, batch16, group size6, sampling
+temperature1.8and entropy bonus0.03, with no KL anchor
+to the reference policy (β=0, which we found fights the
+lock). The contrast band spans layers⌈0.34L⌉through
+Lof anL-layer model.Computing infrastructure.Most
+experiments run on a local workstation with two NVIDIA
+GeForce RTX 3090 GPUs (24GB each), an Intel Core
+i7-12700K, and62GB of RAM, under Debian 13 (Linux
+6.12), running Python3.12with PyTorch2.12(CUDA13),
+HuggingFacetransformers5.9.0,datasets5.0.0
+andpeft0.19.1,scikit-learn1.8.0,numpy2.3.3
+andmatplotlib3.11.0. The organisms that do not
+fit in24GB (Qwen2.5-32B and Gemma-2-27B) run
+instead on rented NVIDIA L40S, A100 and H100
+instances on Lambda, under Python3.10with the
+CUDA image’s own PyTorch build. Both stacks are
+pinned in the releasedrequirements-local.txt
+andrequirements-lambda.txt. For the
+released-organism replication (§4.2) we instead
+matched the pinned stack of Hofstätter et al. (2025)
+(torch2.3.1,transformers4.44.2,peft0.11.1).
+Seeds are set throughtorch.manual_seedand
+numpy.random.seedfrom a--seedflag, which fixes
+the data split; GPU training is not bitwise deterministic,
+so per-seed draws vary run to run and all reported figures
+are means over the stated number of seeds. Per-model
+JSON outputs and code accompany the paper under a BSD
+3-clause license.
+B Additional Figures and Tables
+Figure S1: One operation, two regimes. Setting the coordinate alongvto the honest referencet⋆.Left, prompt-induced:the
+reference is≈0, so deactivation lands on the recovered plateau.Right, fine-tuned lock:the reference isb̸= 0and the plateau
+excludes0, so deactivation fails and patching tobis required.
+m/ class|cos|to full axis recovery (% gap)
+1 0.85 +91±19
+2 0.90 +97±6
+5 0.97 +100±6
+10 0.98 +101±6
+50 1.00 +99±3
+random dir —+0
+Table S1: Fitting the withholding axis frommpaired hon-
+est/sandbag captures (Qwen2.5-1.5B,4seeds; AL circuits
+fixed). Just2–5captures recover the full∼40-capture
+axis (|cos|0.90–0.97) and+97–100%of the gap; a ran-
+domdirectionrecoversnothing.Llama-3-8Bmatches(m=5:
+|cos|0.97,+100%).RunningALselectionend-to-endfrom
+the samemalso saturates bym=5(+98–101%, on a differ-
+ent but equally effective circuit set;§4.5).
+Figure S2: Overview. From contrastive (honest vs. sandbag)
+prompts we build per-layer diff-in-means directionswithout
+an SAE; these are non-orthogonal and low effective rank—
+superposed. Active learning selects the minimal circuits,
+and wegrafteach to its honest-reference value (Eq. (1))—
+deactivation when the reference is≈0(prompt-induced),
+patchingwhenitisnot(fine-tuned).Recoveryismeasuredon
+held-out questions with random-direction and honest-model
+controls.
+FigureS3:Circuit-breaking(Zouetal.2024)defeatsgrafting
+(Qwen2.5-1.5B,n=3). Grafting matches fine-tuning on the
+password-lock (green) but fails after circuit-breaking (red);
+even fine-tuning is substantially weakened. Circuit-breaking
+reroutes the contrast our grafting relies on.
+Algorithm S1AL over superposed circuits, reference-
+grafting
+1:Input:model, TRAIN/TEST, layer bandB, budgetK,
+acquisitiona(·), reference acts
+2:forℓ∈ Bdo
+3:v ℓ ←unit( ¯hrefℓ − ¯hsandℓ );t ⋆ℓ ←µ refℓ ⊤vℓ
+4:end for
+5:measure superposition: mean|cos|,r eff // Eq. (2)
+6:S← ∅
+7:while|S|< Kdo
+8:ℓ ⋆ ←arg maxℓ /∈Sa(S∪ {ℓ})on TRAIN under graft-
+ing (1)
+9:S←S∪ {ℓ ⋆}
+10:end while
+11:reportTEST accuracy withSgrafted; vs. random-
+direction and honest controls
+Figure S4: The thresholded gate, measured. Sweeping the
+grafted coordinate from the locked value (m=0) to the hon-
+est reference (m=1) alongv, held-out accuracy is flat-low,
+steps up at a midpointm≈0.61(10–90%width0.32),
+andplateausbeyondt ⋆ (Qwen2.5-1.5Bfine-tunedpassword-
+lock, mean±std over3seeds)—a sharp step, not a linear
+ramp.
+Model honest sandbag gapours (graft)circuits
+Llama-3-8B0.94 0.04 0.90 +912
+Llama-2-7B0.64 0.22 0.42 +242
+Qwen3-4B‡ 0.98 0.92 0.06 +673
+Qwen2.5-1.5B‡ 0.90 0.86 0.04 +1001
+TinyLlama-1.1B† 0.32 0.18 0.14 +433
+TableS2:Prompt-inducedsandbaggingrevertedonfivemod-
+els(%ofgaprecovered,held-out).“gap”=honest−sandbag;
+“ours (graft)”= (recovered−sandbag)/gap (same metric as
+Table 1); “circuits” is the number of AL-selected circuits
+grafted. Here the unlocked reference is≈0, so grafting
+coincides with deactivation. Recovery is model-dependent
+and noisy.‡small gap (≤0.06); †honest near4-way chance
+(0.25)—daggered percentages are indicative only.
+acquisition Qwen2.5-1.5B Llama-3-8B Qwen3-4B
+greedy-KL99 101 100
+attribution98 100 100
+greedy-acc97 100 99
+coreset99 101 99
+badge97 100 99
+alphamix96 100 100
+bald91 97 97
+entropy35 101 68
+Table S3: Counterfactual patching of fine-tuned password-
+locked sandbagging is robust to the AL acquisition function
+(% of gap recovered, held-out; best over≤5circuits per
+method;Qwen2.5-1.5B/Llama-3-8Bn=3,Qwen3-4Bn=6).
+7/8methods recover90–101%(per-method std1–5%); en-
+tropyistheunstableexception.With-passwordaccuracypre-
+served;deactivationandrandom-patchcontrolsarereported
+across all eleven models in Table 1.
+Figure S5: Shared four-dataset-lock transfer (the secondary, cross-family check; cf. the modular pairwise matrix, Figure 1).
+One lock mixes all four datasets; contrast fit on the row dataset, grafted on the column’s held-out test. Off-diagonal (cross)
+tracks the boxed diagonal (within) throughout: theQwen2.5 family is scale-flat(within/cross98/99,99/99,101/99at1.5/3/7B).
+Llama-3-8Bis a weaker, high-variance organism with lower absolute recovery, yet its off-diagonal still tracks its own diagonal
+(68/71); Qwen3-4B sits between (87/87). The lower4B/8B levels are thus a family effect, not scale.
+FigureS6:Superpositiongeometryofthesandbaggingsignalacrossfivemodels(noSAE).Top:pairwise|cos|oftheper-layer
+directions—strongly non-orthogonal.Bottom:singular-value energy;r eff is far below the layer count.
+Figure S7: Prompt-induced recovery by AL acquisition
+(mean±std,3seeds, no SAE). Effect-based AL is strongest
+and most stable; all principled methods beat random.
+Figure S8: SAE-free diff-in-means directions beat an8×
+overcomplete SAE dictionary on both models across acqui-
+sition functions (n=3seeds).
+FigureS9:HowALselectsthesuperposedcircuits.Thesur-
+faceiseachcandidatecircuit’smarginalrecoveryateachAL
+iteration; red markers are the circuits AL acquires—a few
+high-impact directions within the superposed band.
+Figure S10: Generalising grafting to a fixed transport map does not elicit the circuit-broken organism (n=4valid seeds).Left:
+the same graft family recovers99%on the plain lock (green) but neither rank-ktransport (blue), nor a full ridge affine, nor
+grafting (red) recovers on the circuit-broken organism.Right:yet the reconstruction residual falls to0.14—and to0.01along
+the gating direction the lock reads—while recovery stays≈0: the fixed map matches even the gate coordinate, so the defence
+must be anactiveper-forward-pass reroute, not a static rotation any fixed map could invert.

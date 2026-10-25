@@ -1,0 +1,58 @@
+{
+  "design": "matched binary outcomes near 95% control accuracy with crossed logistic-normal item and template effects",
+  "warning": "scenario check, not a distribution-free guarantee",
+  "cases": [
+    {
+      "n_items": 250,
+      "n_templates": 10,
+      "template_logit_sd": 0.2,
+      "true_marginal_effect": 0.02990454810315515,
+      "mean_control_accuracy": 0.95821,
+      "replications": 200,
+      "bootstrap_draws": 1000,
+      "coverage": 1.0,
+      "coverage_mcse": 0.0,
+      "mean_ci_width": 0.04226965,
+      "mean_estimate": 0.029962
+    },
+    {
+      "n_items": 250,
+      "n_templates": 10,
+      "template_logit_sd": 0.6,
+      "true_marginal_effect": 0.032151590763729254,
+      "mean_control_accuracy": 0.952172,
+      "replications": 200,
+      "bootstrap_draws": 1000,
+      "coverage": 0.985,
+      "coverage_mcse": 0.008595056718835545,
+      "mean_ci_width": 0.046454249999999996,
+      "mean_estimate": 0.031646
+    },
+    {
+      "n_items": 250,
+      "n_templates": 20,
+      "template_logit_sd": 0.2,
+      "true_marginal_effect": 0.02990152212160143,
+      "mean_control_accuracy": 0.957623,
+      "replications": 200,
+      "bootstrap_draws": 1000,
+      "coverage": 0.995,
+      "coverage_mcse": 0.004987484335815003,
+      "mean_ci_width": 0.030880024999999995,
+      "mean_estimate": 0.030272
+    },
+    {
+      "n_items": 250,
+      "n_templates": 20,
+      "template_logit_sd": 0.6,
+      "true_marginal_effect": 0.0321472258953583,
+      "mean_control_accuracy": 0.952857,
+      "replications": 200,
+      "bootstrap_draws": 1000,
+      "coverage": 0.995,
+      "coverage_mcse": 0.004987484335815003,
+      "mean_ci_width": 0.03355879999999999,
+      "mean_estimate": 0.031733000000000004
+    }
+  ]
+}

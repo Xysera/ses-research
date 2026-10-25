@@ -1,0 +1,2 @@
+0b50e9bb1555c5ff193cb51e976decb7053e66ec3c96a687ee7323b3dfb1949e  releases/xysera-ses-v0.6-paper.pdf
+9a20610cc2d954c9f1618d6c188087f73010061d9ff35d2d6d5f46b2ff2c4d19  releases/xysera-ses-v0.6-source.tar.gz

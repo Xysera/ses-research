@@ -1,0 +1,12 @@
+.DS_Store
+.venv/
+models/
+logs/
+tmp/
+**/__pycache__/
+*.pyc
+*.pyo
+*.eval
+sandbagging-standard/external/auditing_games/evaluation_transcripts/
+output/pdf/rendered_*/
+results/hf/

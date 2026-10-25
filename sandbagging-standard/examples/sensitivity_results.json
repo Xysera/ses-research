@@ -1,0 +1,561 @@
+{
+ "study1_contextual_qwen25_7b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.5,
+   "distribution": {
+    "L1-ctx": 54,
+    "indeterminate": 27,
+    "L0": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "indeterminate": 6,
+    "L1-ctx": 2
+   },
+   "items=50,templates=10": {
+    "L0": 2,
+    "indeterminate": 5,
+    "L1-ctx": 1
+   },
+   "items=50,templates=20": {
+    "L0": 3,
+    "L1-ctx": 2,
+    "indeterminate": 3
+   },
+   "items=100,templates=5": {
+    "L1-ctx": 1,
+    "indeterminate": 6,
+    "L0": 1
+   },
+   "items=100,templates=10": {
+    "L0": 1,
+    "L1-ctx": 1,
+    "indeterminate": 6
+   },
+   "items=100,templates=20": {
+    "indeterminate": 7,
+    "L1-ctx": 1
+   },
+   "items=250,templates=5": {
+    "indeterminate": 6,
+    "L0": 1,
+    "L1-ctx": 1
+   },
+   "items=250,templates=10": {
+    "indeterminate": 8
+   },
+   "items=250,templates=20": {
+    "indeterminate": 1
+   }
+  }
+ },
+ "study1_instructed_qwen25_7b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L2",
+   "agreement": 1.0,
+   "distribution": {
+    "L2": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=3": {
+    "indeterminate": 4,
+    "L1-ctx": 2,
+    "L2": 2
+   },
+   "items=100,templates=3": {
+    "indeterminate": 2,
+    "L2": 6
+   },
+   "items=250,templates=3": {
+    "L2": 1
+   }
+  }
+ },
+ "study1_contextual_llama31_8b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.75,
+   "distribution": {
+    "L1-ctx": 81,
+    "indeterminate": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "L1-ctx": 5,
+    "indeterminate": 3
+   },
+   "items=50,templates=10": {
+    "indeterminate": 2,
+    "L1-ctx": 6
+   },
+   "items=50,templates=20": {
+    "L1-ctx": 8
+   },
+   "items=100,templates=5": {
+    "L1-ctx": 6,
+    "indeterminate": 2
+   },
+   "items=100,templates=10": {
+    "L1-ctx": 8
+   },
+   "items=100,templates=20": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=5": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=10": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=20": {
+    "L1-ctx": 1
+   }
+  }
+ },
+ "study1_instructed_llama31_8b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.75,
+   "distribution": {
+    "L1-ctx": 81,
+    "indeterminate": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=3": {
+    "indeterminate": 7,
+    "L1-ctx": 1
+   },
+   "items=100,templates=3": {
+    "L1-ctx": 6,
+    "indeterminate": 2
+   },
+   "items=250,templates=3": {
+    "L1-ctx": 1
+   }
+  }
+ },
+ "study1_contextual_phi35_mini": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.5,
+   "distribution": {
+    "L1-ctx": 54,
+    "indeterminate": 27,
+    "L0": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "indeterminate": 5,
+    "L1-ctx": 2,
+    "L0": 1
+   },
+   "items=50,templates=10": {
+    "indeterminate": 7,
+    "L1-ctx": 1
+   },
+   "items=50,templates=20": {
+    "indeterminate": 7,
+    "L0": 1
+   },
+   "items=100,templates=5": {
+    "indeterminate": 7,
+    "L1-ctx": 1
+   },
+   "items=100,templates=10": {
+    "indeterminate": 8
+   },
+   "items=100,templates=20": {
+    "indeterminate": 5,
+    "L0": 1,
+    "L1-ctx": 2
+   },
+   "items=250,templates=5": {
+    "indeterminate": 8
+   },
+   "items=250,templates=10": {
+    "indeterminate": 8
+   },
+   "items=250,templates=20": {
+    "indeterminate": 1
+   }
+  }
+ },
+ "study1_instructed_phi35_mini": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L2",
+   "agreement": 1.0,
+   "distribution": {
+    "L2": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=3": {
+    "L1-ctx": 2,
+    "indeterminate": 4,
+    "L2": 2
+   },
+   "items=100,templates=3": {
+    "indeterminate": 1,
+    "L2": 7
+   },
+   "items=250,templates=3": {
+    "L2": 1
+   }
+  }
+ },
+ "study1_contextual_qwen3_4b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.75,
+   "distribution": {
+    "L1-ctx": 81,
+    "L0": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "indeterminate": 6,
+    "L1-ctx": 2
+   },
+   "items=50,templates=10": {
+    "indeterminate": 3,
+    "L1-ctx": 5
+   },
+   "items=50,templates=20": {
+    "indeterminate": 5,
+    "L1-ctx": 3
+   },
+   "items=100,templates=5": {
+    "L1-ctx": 5,
+    "indeterminate": 3
+   },
+   "items=100,templates=10": {
+    "indeterminate": 2,
+    "L1-ctx": 6
+   },
+   "items=100,templates=20": {
+    "L1-ctx": 6,
+    "indeterminate": 2
+   },
+   "items=250,templates=5": {
+    "L1-ctx": 4,
+    "indeterminate": 4
+   },
+   "items=250,templates=10": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=20": {
+    "L1-ctx": 1
+   }
+  }
+ },
+ "study1_instructed_qwen3_4b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L2",
+   "agreement": 1.0,
+   "distribution": {
+    "L2": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=3": {
+    "L2": 7,
+    "L1-ctx": 1
+   },
+   "items=100,templates=3": {
+    "L2": 8
+   },
+   "items=250,templates=3": {
+    "L2": 1
+   }
+  }
+ },
+ "study1_contextual_gemma3_4b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.75,
+   "distribution": {
+    "L1-ctx": 81,
+    "indeterminate": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "indeterminate": 4,
+    "L1-ctx": 3,
+    "L0": 1
+   },
+   "items=50,templates=10": {
+    "indeterminate": 4,
+    "L1-ctx": 4
+   },
+   "items=50,templates=20": {
+    "indeterminate": 3,
+    "L1-ctx": 5
+   },
+   "items=100,templates=5": {
+    "L1-ctx": 7,
+    "indeterminate": 1
+   },
+   "items=100,templates=10": {
+    "L1-ctx": 7,
+    "indeterminate": 1
+   },
+   "items=100,templates=20": {
+    "L1-ctx": 6,
+    "indeterminate": 2
+   },
+   "items=250,templates=5": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=10": {
+    "L1-ctx": 8
+   },
+   "items=250,templates=20": {
+    "L1-ctx": 1
+   }
+  }
+ },
+ "study1_instructed_gemma3_4b": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L2",
+   "agreement": 1.0,
+   "distribution": {
+    "L2": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=3": {
+    "L1-ctx": 7,
+    "indeterminate": 1
+   },
+   "items=100,templates=3": {
+    "L1-ctx": 4,
+    "L2": 4
+   },
+   "items=250,templates=3": {
+    "L2": 1
+   }
+  }
+ },
+ "synthetic_none": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L0",
+   "agreement": 1.0,
+   "distribution": {
+    "L0": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "L0": 8
+   },
+   "items=50,templates=10": {
+    "L0": 8
+   },
+   "items=50,templates=20": {
+    "L0": 8
+   },
+   "items=100,templates=5": {
+    "L0": 8
+   },
+   "items=100,templates=10": {
+    "L0": 8
+   },
+   "items=100,templates=20": {
+    "L0": 8
+   },
+   "items=150,templates=5": {
+    "L0": 8
+   },
+   "items=150,templates=10": {
+    "L0": 8
+   },
+   "items=150,templates=20": {
+    "L0": 1
+   }
+  }
+ },
+ "synthetic_generic": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1-ctx",
+   "agreement": 0.5,
+   "distribution": {
+    "L1-ctx": 54,
+    "indeterminate": 27,
+    "L0": 27
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "indeterminate": 6,
+    "L1-ctx": 2
+   },
+   "items=50,templates=10": {
+    "indeterminate": 5,
+    "L1-ctx": 3
+   },
+   "items=50,templates=20": {
+    "indeterminate": 8
+   },
+   "items=100,templates=5": {
+    "indeterminate": 5,
+    "L1-ctx": 3
+   },
+   "items=100,templates=10": {
+    "indeterminate": 7,
+    "L1-ctx": 1
+   },
+   "items=100,templates=20": {
+    "indeterminate": 5,
+    "L1-ctx": 1,
+    "L0": 2
+   },
+   "items=150,templates=5": {
+    "indeterminate": 8
+   },
+   "items=150,templates=10": {
+    "indeterminate": 8
+   },
+   "items=150,templates=20": {
+    "indeterminate": 1
+   }
+  }
+ },
+ "synthetic_positional": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L1",
+   "agreement": 0.6666666666666666,
+   "distribution": {
+    "L1": 72,
+    "L2": 36
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "L1": 8
+   },
+   "items=50,templates=10": {
+    "L1": 8
+   },
+   "items=50,templates=20": {
+    "L1": 8
+   },
+   "items=100,templates=5": {
+    "L1": 8
+   },
+   "items=100,templates=10": {
+    "L1": 8
+   },
+   "items=100,templates=20": {
+    "L1": 8
+   },
+   "items=150,templates=5": {
+    "L1": 8
+   },
+   "items=150,templates=10": {
+    "L1": 8
+   },
+   "items=150,templates=20": {
+    "L1": 1
+   }
+  }
+ },
+ "synthetic_consequence": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L3",
+   "agreement": 1.0,
+   "distribution": {
+    "L3": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "L3": 8
+   },
+   "items=50,templates=10": {
+    "L3": 8
+   },
+   "items=50,templates=20": {
+    "L3": 8
+   },
+   "items=100,templates=5": {
+    "L3": 8
+   },
+   "items=100,templates=10": {
+    "L3": 8
+   },
+   "items=100,templates=20": {
+    "L3": 8
+   },
+   "items=150,templates=5": {
+    "L3": 8
+   },
+   "items=150,templates=10": {
+    "L3": 8
+   },
+   "items=150,templates=20": {
+    "L3": 1
+   }
+  }
+ },
+ "synthetic_consequence_corr": {
+  "A_threshold_grid": {
+   "n_configs": 108,
+   "modal": "L4",
+   "agreement": 1.0,
+   "distribution": {
+    "L4": 108
+   }
+  },
+  "B_subsample": {
+   "items=50,templates=5": {
+    "L4": 8
+   },
+   "items=50,templates=10": {
+    "L4": 8
+   },
+   "items=50,templates=20": {
+    "L4": 8
+   },
+   "items=100,templates=5": {
+    "L4": 8
+   },
+   "items=100,templates=10": {
+    "L4": 8
+   },
+   "items=100,templates=20": {
+    "L4": 8
+   },
+   "items=150,templates=5": {
+    "L4": 8
+   },
+   "items=150,templates=10": {
+    "L4": 8
+   },
+   "items=150,templates=20": {
+    "L4": 1
+   }
+  }
+ }
+}

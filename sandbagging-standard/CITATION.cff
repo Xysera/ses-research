@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use the Sandbagging Evidence Standard, please cite this release."
+title: "Toward an Evidence Standard for Sandbagging Claims: A Literature Synthesis, Reference Implementation and Worked Application"
+type: article
+authors:
+  - given-names: "Torin"
+    family-names: "Ethreidge"
+    affiliation: "Xysera Research"
+version: 1.0.0-rc1
+date-released: 2026-10-25
+abstract: >-
+  A proposed, operational evidence standard for grading claims of language-model
+  sandbagging, accompanied by a source ledger, reference implementation, synthetic
+  14 tests, worked application to 166,250 preregistered trials, sensitivity analysis,
+  and a small exploratory screen.
+keywords:
+  - artificial intelligence safety
+  - language models
+  - sandbagging
+  - strategic underperformance
+  - capability evaluation
+  - evaluation integrity
+repository-code: "https://github.com/Xysera/ses-research"
